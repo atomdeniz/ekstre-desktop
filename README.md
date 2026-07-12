@@ -60,6 +60,20 @@ Banka tanımları [`core/banks/banks.yml`](core/banks/banks.yml) içinde derleme
 kullanıcı düzenlemez, wizard'da checkbox ile seçer. Yeni banka eklemek bir YAML girdisidir
 (topluluk PR'ı) — kod değişikliği değil.
 
+## Gizlilik
+
+Ekstre tüm verini (ekstreler, hesap bilgileri) yalnızca **kendi cihazında** saklar;
+hiçbir sunucuya veri göndermez, telemetri toplamaz. E-posta kutun **salt-okunur**
+taranır ve hiçbir e-posta okundu olarak işaretlenmez. IMAP parolan işletim sisteminin
+güvenli deposunda (macOS Keychain / Windows Credential Manager) tutulur.
+
+## İndirme ve kod imzalama
+
+Kurulum dosyaları [Releases](https://github.com/atomdeniz/ekstre-desktop/releases)
+sayfasındadır. Windows derlemeleri [SignPath Foundation](https://signpath.org)'ın açık
+kaynak programı aracılığıyla kod-imzalanır; macOS derlemeleri Apple Developer ID ile
+imzalanıp notarize edilir.
+
 ## Lisans
 
 MIT.

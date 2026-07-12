@@ -50,8 +50,9 @@ Grab the latest build from the
 
 - **macOS** — a `.dmg`, signed with an Apple Developer ID and notarized by Apple,
   so it opens without security warnings.
-- **Windows** — an installer (`.exe`); Windows builds are code-signed via the
-  [SignPath Foundation](https://signpath.org) open-source program.
+- **Windows** — an installer (`.exe`). Windows builds are not yet code-signed, so
+  on first run SmartScreen may warn you — choose **More info → Run anyway**.
+  (Signing is planned once the project qualifies.)
 
 The app updates itself automatically, so you install once and stay current.
 

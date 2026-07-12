@@ -179,6 +179,13 @@ fn find_pdfium_dir(resource_dir: Option<PathBuf>) -> Option<String> {
     if let Some(res) = resource_dir {
         candidates.push(res.join("pdfium").to_string_lossy().into_owned());
     }
+    // Bundled release: libpdfium is signed into Contents/Frameworks (../Frameworks
+    // relative to the executable in Contents/MacOS).
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(contents) = exe.parent().and_then(|p| p.parent()) {
+            candidates.push(contents.join("Frameworks").to_string_lossy().into_owned());
+        }
+    }
     candidates.push("vendor/pdfium/lib".into());
     candidates.push("../vendor/pdfium/lib".into());
 

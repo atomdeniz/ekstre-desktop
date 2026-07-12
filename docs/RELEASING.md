@@ -1,70 +1,74 @@
-# Sürüm çıkarma (macOS imzalı + notarized + auto-update)
+# Releasing (macOS signed + notarized + auto-update)
 
-Bir sürüm, `v*` etiketi push'lanınca `.github/workflows/release.yml` tarafından
-otomatik derlenir, **imzalanır, notarize edilir** ve auto-update artifact'leriyle
-birlikte GitHub Releases'a **taslak** olarak yüklenir.
+A release is built automatically by `.github/workflows/release.yml` when a `v*`
+tag is pushed. It is **signed, notarized**, and uploaded to GitHub Releases as a
+**draft** along with the auto-update artifacts.
 
 ```bash
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
-## Gerekli GitHub Secrets
+## Required GitHub Secrets
 
 Repo → Settings → Secrets and variables → Actions:
 
-### Apple imzalama + notarization
-| Secret | Nereden |
+### Apple signing + notarization
+| Secret | Where from |
 |---|---|
-| `APPLE_CERTIFICATE` | "Developer ID Application" sertifikanı `.p12` olarak dışa aktar, `base64 -i cert.p12 \| pbcopy` |
-| `APPLE_CERTIFICATE_PASSWORD` | `.p12` dışa aktarırken belirlediğin şifre |
-| `APPLE_SIGNING_IDENTITY` | ör. `Developer ID Application: Ad Soyad (TEAMID)` |
-| `APPLE_ID` | Apple Developer hesabının e-postası |
-| `APPLE_PASSWORD` | appleid.apple.com'dan **uygulamaya özel şifre** (notarization için) |
-| `APPLE_TEAM_ID` | 10 haneli Team ID |
+| `APPLE_CERTIFICATE` | Export your "Developer ID Application" certificate as `.p12`, then `base64 -i cert.p12 \| pbcopy` |
+| `APPLE_CERTIFICATE_PASSWORD` | The password you set when exporting the `.p12` |
+| `APPLE_SIGNING_IDENTITY` | e.g. `Developer ID Application: First Last (TEAMID)` |
+| `APPLE_ID` | The email of your Apple Developer account |
+| `APPLE_PASSWORD` | An **app-specific password** from appleid.apple.com (for notarization) |
+| `APPLE_TEAM_ID` | Your 10-character Team ID |
 
-### Auto-update imzalama (Tauri)
-| Secret | Nereden |
+### Auto-update signing (Tauri)
+| Secret | Where from |
 |---|---|
-| `TAURI_SIGNING_PRIVATE_KEY` | Updater özel anahtarının **içeriği** (aşağıya bak) |
-| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Anahtar şifresi (bizde boş) |
+| `TAURI_SIGNING_PRIVATE_KEY` | The **contents** of the updater private key (see below) |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | The key password (empty in our case) |
 
-## Updater anahtar çifti
+## Updater key pair
 
-`tauri.conf.json` içindeki `plugins.updater.pubkey` alanına gömülü **açık anahtar**
-zaten repoda. Eşleşen **özel anahtarı** kendin üretmelisin (mevcut açık anahtarı
-kullanmak istiyorsan, ilk kurulumda üretilen özel anahtarı kullan; kaybettiysen
-yenisini üret ve `pubkey`'i güncelle):
+The **public key** embedded in the `plugins.updater.pubkey` field of
+`tauri.conf.json` is already in the repo. You must generate the matching
+**private key** yourself (if you want to keep the existing public key, use the
+private key generated during initial setup; if you lost it, generate a new one
+and update `pubkey`):
 
 ```bash
 cargo tauri signer generate -w ~/.tauri/ekstre-updater.key
-# Çıkan açık anahtarı tauri.conf.json > plugins.updater.pubkey içine koy
-# Özel anahtarın içeriğini TAURI_SIGNING_PRIVATE_KEY secret'ına koy:
+# Put the resulting public key into tauri.conf.json > plugins.updater.pubkey
+# Put the contents of the private key into the TAURI_SIGNING_PRIVATE_KEY secret:
 cat ~/.tauri/ekstre-updater.key | pbcopy
 ```
 
-> ⚠️ Özel anahtarı kaybedersen mevcut kullanıcılara güncelleme gönderemezsin.
-> Güvenli bir yerde sakla.
+> ⚠️ If you lose the private key you cannot ship updates to existing users.
+> Keep it somewhere safe.
 
 ## Updater endpoint
 
-`tauri.conf.json > plugins.updater.endpoints` şu an
-`github.com/atomdeniz/ekstre-desktop` reposuna işaret ediyor. Repo adın farklıysa
-burayı ve `release.yml`'deki pdfium sürümünü güncelle.
+`tauri.conf.json > plugins.updater.endpoints` currently points at the
+`github.com/atomdeniz/ekstre-desktop` repo. If your repo name differs, update
+this and the pdfium version in `release.yml`.
 
 ## Windows
 
-Release workflow artık **Windows'u da** üretiyor (matrix): `windows-latest`'te
-`pdfium.dll` indiriliyor, NSIS `.exe` kurulum + updater artifact'leri oluşup aynı
-sürüme yükleniyor. Ekstra secret gerekmez — updater imzası zaten ortak.
+The release workflow now builds **Windows too** (matrix): on `windows-latest`
+`pdfium.dll` is downloaded, and the NSIS `.exe` installer + updater artifacts are
+produced and uploaded to the same release. No extra secrets needed — the updater
+signature is already shared.
 
-**İmzalama (henüz yok):** Windows build şu an **imzasız**, yani ilk çalıştırmada
-SmartScreen "bilinmeyen yayıncı" uyarısı çıkar (geçilebilir: "Daha fazla bilgi →
-Yine de çalıştır"). Non-tech kullanıcı için bunu kaldırmak istersen imza ekle:
+**Signing (not yet in place):** the Windows build is currently **unsigned**, so
+on first launch SmartScreen shows an "unknown publisher" warning (dismissable:
+"More info → Run anyway"). If you want to remove this for non-technical users,
+add signing:
 
-- **[SignPath](https://signpath.io)** — açık kaynak projelere **ücretsiz** kod
-  imzalama sunar (başvuru/onay gerekir). Önerilen yol.
-- **Azure Trusted Signing** — ~$10/ay, hızlı kurulum.
+- **[SignPath](https://signpath.io)** — offers **free** code signing for
+  open-source projects (application/approval required). The recommended path.
+- **Azure Trusted Signing** — ~$10/month, quick setup.
 
-İmza eklenince `tauri-action`'a Windows imza env'leri (ör. SignPath action'ı ya da
-`certificateThumbprint`) bağlanır; pipeline'ın geri kalanı aynı kalır.
+Once signing is added, wire the Windows signing env vars into `tauri-action`
+(e.g. the SignPath action or `certificateThumbprint`); the rest of the pipeline
+stays the same.

@@ -44,3 +44,14 @@ banks:
       min_due: 'Ödenmesi Gereken Asgari Tutar:\s*([\d.]+,(?:\d{2}|-))'
       due_date: 'Son Ödeme Tarihi:\s*(\d{2})[./](\d{2})[./](\d{4})'
       statement_date: 'Hesap Kesim Tarihi:\s*(\d{2})[./](\d{2})[./](\d{4})'
+
+  - name: Yapı Kredi
+    color: "#004990"
+    match: { from: yapikredi.com.tr, subject: Hesap Özeti }
+    source: pdf
+    fields:
+      card: 'Kart Numarası\s*:?\s*(\d{4})\s*\d{2}\*+\s*\*+\s*(\d{4})'
+      total_due: 'Dönem Borcu\s*:?\s*([\d.]+,\d{2})\s*TL'
+      min_due: 'Ödenmesi Gereken Asgari Tutar(?:/Oran)?\s*:?\s*([\d.]+,\d{2})\s*TL'
+      due_date: 'Son Ödeme Tarihi\s*:?\s*(\d{1,2})\s+(\S+)\s+(\d{4})'
+      statement_date: 'Hesap Kesim Tarihi\s*:?\s*(\d{1,2})\s+(\S+)\s+(\d{4})'

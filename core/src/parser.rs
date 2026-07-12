@@ -25,12 +25,27 @@ pub fn parse_amount(raw: &str) -> f64 {
         .unwrap()
 }
 
-/// Three numeric groups (day, month, year) to zero-padded ISO `YYYY-MM-DD`.
+/// Three groups (day, month, year) to zero-padded ISO `YYYY-MM-DD`. `month` is a
+/// number or a Turkish month name (see `month_to_num`).
 pub fn parse_date(day: &str, month: &str, year: &str) -> String {
     let d: u32 = day.parse().unwrap();
-    let m: u32 = month.parse().unwrap();
+    let m: u32 = month_to_num(month);
     let y: i32 = year.parse().unwrap();
     format!("{y:04}-{m:02}-{d:02}")
+}
+
+/// Numeric month string passes through; a Turkish month name is mapped to its
+/// number (Yapı Kredi writes dates as "7 Mayıs 2026").
+fn month_to_num(month: &str) -> u32 {
+    if let Ok(n) = month.parse::<u32>() {
+        return n;
+    }
+    match month.to_lowercase().as_str() {
+        "ocak" => 1, "şubat" => 2, "mart" => 3, "nisan" => 4,
+        "mayıs" => 5, "haziran" => 6, "temmuz" => 7, "ağustos" => 8,
+        "eylül" => 9, "ekim" => 10, "kasım" => 11, "aralık" => 12,
+        other => panic!("bilinmeyen Türkçe ay: {other}"),
+    }
 }
 
 /// Parse `text` against a bank's field regexes.

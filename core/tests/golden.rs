@@ -35,6 +35,7 @@ fn test_parse_amount() {
 fn test_parse_date() {
     assert_eq!(parse_date("25", "07", "2026"), "2026-07-25");
     assert_eq!(parse_date("5", "9", "2026"), "2026-09-05");
+    assert_eq!(parse_date("7", "Mayıs", "2026"), "2026-05-07");
 }
 
 #[test]
@@ -83,6 +84,19 @@ fn test_is() {
     assert_eq!(s.min_due, Some(500.0));
     assert_eq!(s.due_date, "2026-09-15");
     assert_eq!(s.statement_date.as_deref(), Some("2026-09-03"));
+}
+
+#[test]
+fn test_yapikredi() {
+    let b = banks();
+    let s = parse_statement(&b["Yapı Kredi"], &fixture("yapikredi.txt")).unwrap();
+    assert_eq!(s.bank, "Yapı Kredi");
+    assert_eq!(s.card_last4.as_deref(), Some("9803"));
+    assert_eq!(s.card_masked.as_deref(), Some("4506 **** **** 9803"));
+    assert_eq!(s.total_due, 2952.54);
+    assert_eq!(s.min_due, Some(1181.02));
+    assert_eq!(s.due_date, "2026-05-07");
+    assert_eq!(s.statement_date.as_deref(), Some("2026-04-27"));
 }
 
 #[test]

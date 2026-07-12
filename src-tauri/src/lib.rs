@@ -34,8 +34,9 @@ pub fn run() {
             let quit = MenuItem::with_id(app, "quit", "Çıkış", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &poll, &settings, &quit])?;
 
+            let tray_icon = tauri::image::Image::from_bytes(include_bytes!("../icons/tray.png"))?;
             TrayIconBuilder::with_id("main")
-                .icon(app.default_window_icon().unwrap().clone())
+                .icon(tray_icon)
                 .icon_as_template(true)
                 .tooltip("Ekstre")
                 .menu(&menu)

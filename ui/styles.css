@@ -1,0 +1,77 @@
+:root {
+  --bg: #f4f4f6;
+  --card: #ffffff;
+  --text: #1a1a1a;
+  --muted: #6b7280;
+  --border: #e4e4e8;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16171a;
+    --card: #202126;
+    --text: #f2f2f3;
+    --muted: #9296a0;
+    --border: #303138;
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  padding: 16px;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+h1 { font-size: 20px; margin: 0; }
+.actions { display: flex; gap: 8px; }
+
+.btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+.btn:active { transform: translateY(1px); }
+.btn.icon { flex: 0 0 auto; font-size: 15px; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent, #666);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.card .top { display: flex; justify-content: space-between; align-items: center; }
+.bank { font-weight: 700; font-size: 15px; }
+.masked { color: var(--muted); font-size: 13px; margin: 6px 0 10px; font-variant-numeric: tabular-nums; }
+
+.amounts { display: flex; gap: 20px; margin-bottom: 8px; }
+.amt-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+.amt-value { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+body.blur .amt-value { filter: blur(7px); }
+
+.meta { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); }
+
+.badge { padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; color: #fff; }
+.b-gray { background: #6b7280; }
+.b-red { background: #dc2626; }
+.b-orange { background: #ea580c; }
+.b-green { background: #16a34a; }
+
+.empty { text-align: center; color: var(--muted); margin-top: 40px; }
+.status { text-align: center; color: var(--muted); font-size: 12px; min-height: 16px; }

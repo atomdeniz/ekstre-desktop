@@ -1,0 +1,52 @@
+name: Release
+
+# Tag a version to build, sign, notarize, and publish a macOS release with
+# auto-update artifacts:  git tag v0.1.0 && git push origin v0.1.0
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Fetch universal libpdfium
+        run: |
+          mkdir -p src-tauri/resources/pdfium
+          curl -sL "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/7934/pdfium-mac-univ.tgz" -o pdfium.tgz
+          mkdir pdfium-extract && tar xzf pdfium.tgz -C pdfium-extract
+          cp pdfium-extract/lib/libpdfium.dylib src-tauri/resources/pdfium/libpdfium.dylib
+
+      - name: Run core tests
+        run: cargo test -p ekstre-core
+
+      - name: Build, sign, notarize & publish
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS code signing + notarization
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Updater signing (Tauri)
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          args: --target universal-apple-darwin
+          tagName: ${{ github.ref_name }}
+          releaseName: "Ekstre ${{ github.ref_name }}"
+          releaseDraft: true
+          prerelease: false

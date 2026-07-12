@@ -1,0 +1,19 @@
+[package]
+name = "ekstre-core"
+version = "0.1.0"
+edition = "2021"
+description = "Ekstre Desktop core: bank statement parsing, storage, and matching"
+license = "MIT"
+
+[dependencies]
+regex = "1"
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+pdfium-render = { version = "0.8", features = ["thread_safe"] }
+imap = "2.4"
+native-tls = "0.2"
+mail-parser = "0.9"
+
+[dev-dependencies]
+rusqlite = { version = "0.32", features = ["bundled"] }

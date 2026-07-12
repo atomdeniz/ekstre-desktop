@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ekstre — Kurulum</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="wizard.css" />
+  </head>
+  <body>
+    <div class="wizard">
+      <!-- Step 1: welcome -->
+      <section class="step" data-step="1">
+        <h1>💳 Ekstre'ye hoş geldin</h1>
+        <p>Kredi kartı ekstrelerini e-posta kutundan okuyup son ödeme gününde
+           sana hatırlatır.</p>
+        <p class="privacy">🔒 Verilerin bu bilgisayardan çıkmaz. E-posta kutun
+           yalnızca <b>okunur</b>, hiçbir e-posta okundu işaretlenmez.</p>
+        <div class="nav"><button class="btn primary" data-next>Başla</button></div>
+      </section>
+
+      <!-- Step 2: email -->
+      <section class="step" data-step="2" hidden>
+        <h1>E-posta hesabını bağla</h1>
+        <label>E-posta sağlayıcı
+          <select id="provider"></select>
+        </label>
+        <p class="hint" id="pw-hint"></p>
+        <label>E-posta adresi
+          <input id="user" type="email" placeholder="ornek@gmail.com" />
+        </label>
+        <label>Uygulama şifresi
+          <input id="password" type="password" placeholder="Uygulama şifresi" />
+        </label>
+        <div id="server-fields" hidden>
+          <label>Sunucu <input id="host" type="text" /></label>
+          <label>Port <input id="port" type="number" value="993" /></label>
+        </div>
+        <details>
+          <summary>Gelişmiş (IMAP klasörü)</summary>
+          <label>Klasör <input id="mailbox" type="text" value="INBOX" /></label>
+        </details>
+        <div class="test">
+          <button class="btn" id="test-btn">Bağlantıyı test et</button>
+          <span id="test-result" class="result"></span>
+        </div>
+        <div class="nav">
+          <button class="btn" data-prev>Geri</button>
+          <button class="btn primary" data-next id="email-next" disabled>Devam</button>
+        </div>
+      </section>
+
+      <!-- Step 3: banks -->
+      <section class="step" data-step="3" hidden>
+        <h1>Bankalarını seç</h1>
+        <p class="hint">Yalnızca seçtiğin bankaların ekstreleri taranır.</p>
+        <div id="bank-list" class="bank-list"></div>
+        <div class="nav">
+          <button class="btn" data-prev>Geri</button>
+          <button class="btn primary" id="finish">Bitir</button>
+        </div>
+      </section>
+    </div>
+    <script type="module" src="wizard.js"></script>
+  </body>
+</html>

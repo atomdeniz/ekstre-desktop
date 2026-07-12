@@ -1,0 +1,11 @@
+CEPTETEB DİJİTAL KREDİ KARTI HESAP ÖZETİ
+Müşteri Numarası :12345678
+Kart Numarası :123456******5678
+Kart Limiti :TL.200.000,-
+Nakit Avans Limiti :TL.25.000,-
+Hesap Kesim Tarihi :30/06/2026
+Son Ödeme Tarihi :10/07/2026
+Dönem Borcu :TL.12.345,67
+Minimum Ödeme Tutarı :TL.1.234,-
+Bir Sonraki Hesap Kesim Tarihi :31/07/2026
+Bir Sonraki Son Ödeme Tarihi :10/08/2026

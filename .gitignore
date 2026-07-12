@@ -1,0 +1,13 @@
+/target
+**/target
+node_modules
+dist
+.DS_Store
+# local secrets / user data
+*.db
+data/
+samples/
+vendor/
+src-tauri/resources/pdfium/
+src-tauri/gen/
+icon_source.png

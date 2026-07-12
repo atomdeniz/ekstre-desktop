@@ -7,13 +7,16 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: "."
-      # pdfium is only needed for the PDF integration examples, not the unit tests.
       - name: Run core tests
         run: cargo test -p ekstre-core
+      # Compile the full desktop app so macOS-specific breakage is caught before
+      # tagging a release (compilation only — no pdfium/signing needed here).
+      - name: Build the app (compile check)
+        run: cargo build -p ekstre-desktop

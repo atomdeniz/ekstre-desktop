@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use ekstre_core::banks::Bank;
-use ekstre_core::imap::{scan, ImapConfig};
+use ekstre_core::imap::{scan, ImapConfig, Scanned};
 use ekstre_core::{builtin_banks, Database};
 
 const KEYRING_SERVICE: &str = "com.denizozogul.ekstre";
@@ -61,6 +61,8 @@ pub struct AppState {
     pub banks: Vec<Bank>,
     /// Directory holding libpdfium; bound fresh per poll (pdfium is not Send).
     pub pdfium_lib_dir: Option<String>,
+    /// OS app-data dir; holds `ekstre.db` and the `statements/` PDF store.
+    pub data_dir: PathBuf,
 }
 
 impl AppState {
@@ -72,7 +74,20 @@ impl AppState {
             db,
             banks: builtin_banks(),
             pdfium_lib_dir: find_pdfium_dir(resource_dir),
+            data_dir,
         }
+    }
+
+    /// Directory where scanned statement PDFs are stored, one file per row id
+    /// (`<id>.pdf`). Created on demand.
+    pub fn statements_dir(&self) -> PathBuf {
+        let dir = self.data_dir.join("statements");
+        let _ = std::fs::create_dir_all(&dir);
+        dir
+    }
+
+    pub fn statement_pdf_path(&self, id: i64) -> PathBuf {
+        self.statements_dir().join(format!("{id}.pdf"))
     }
 
     /// Map of bank name -> dashboard color.
@@ -151,7 +166,7 @@ impl AppState {
             .pdfium_lib_dir
             .as_ref()
             .and_then(|dir| ekstre_core::pdf::bind_pdfium(dir).ok());
-        let statements = scan(
+        let scanned = scan(
             &imap_cfg,
             &banks,
             cfg.lookback_days,
@@ -161,12 +176,35 @@ impl AppState {
         .map_err(|e| format!("IMAP taraması başarısız: {e}"))?;
 
         let mut added = 0;
-        for s in &statements {
-            if self.db.insert_statement(s).map_err(|e| e.to_string())? {
+        for item in &scanned {
+            if self.db.insert_statement(&item.statement).map_err(|e| e.to_string())? {
                 added += 1;
             }
+            self.store_pdf(&item);
         }
         Ok(added)
+    }
+
+    /// Persist a scanned statement's PDF as `statements/<id>.pdf`, if we have the
+    /// bytes and no file yet. Runs whether the row was newly inserted or deduped,
+    /// so re-scanning backfills PDFs for statements captured before this feature.
+    /// Best-effort: a write failure is logged, never fatal to the poll.
+    fn store_pdf(&self, item: &Scanned) {
+        let Some(bytes) = &item.pdf else { return };
+        let id = match self.db.statement_id(&item.statement) {
+            Ok(Some(id)) => id,
+            Ok(None) => return,
+            Err(e) => {
+                log::warn!("statement_id lookup failed: {e}");
+                return;
+            }
+        };
+        let path = self.statement_pdf_path(id);
+        if !path.exists() {
+            if let Err(e) = std::fs::write(&path, bytes) {
+                log::warn!("failed to store statement PDF {}: {e}", path.display());
+            }
+        }
     }
 }
 

@@ -57,6 +57,19 @@ h1 { font-size: 20px; margin: 0; }
   margin-bottom: 12px;
 }
 .card .top { display: flex; justify-content: space-between; align-items: center; }
+.dl {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.dl:hover { color: var(--text); }
+.dl:active { transform: translateY(1px); }
+.dl:disabled { opacity: .5; cursor: default; }
 .bank { font-weight: 700; font-size: 15px; }
 .masked { color: var(--muted); font-size: 13px; margin: 6px 0 10px; font-variant-numeric: tabular-nums; }
 

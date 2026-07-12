@@ -101,6 +101,7 @@ pub fn run() {
             commands::update_settings,
             commands::get_settings,
             commands::save_settings,
+            commands::download_statement,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Ekstre");

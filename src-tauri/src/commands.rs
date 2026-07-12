@@ -33,6 +33,7 @@ impl From<ImapForm> for ImapConfig {
 /// One dashboard card.
 #[derive(Serialize)]
 pub struct CardView {
+    pub id: i64,
     pub bank: String,
     pub card_masked: Option<String>,
     pub total_due_fmt: String,
@@ -52,6 +53,7 @@ pub fn get_statements(state: State<AppState>) -> Result<Vec<CardView>, String> {
     let cards = rows
         .into_iter()
         .map(|r| CardView {
+            id: r.id,
             days_left: days_left(&r.due_date, &today),
             color: colors.get(&r.bank).cloned().unwrap_or_else(|| "#666666".into()),
             total_due_fmt: format_amount_tr(r.total_due),
@@ -172,4 +174,71 @@ pub fn save_settings(
         state.db.set_setting(&k, &v).map_err(|e| e.to_string())?;
     }
     Ok(())
+}
+
+/// Copy a stored statement PDF into the user's Downloads folder under a readable
+/// name (`Bank_YYYY-MM-DD.pdf`), then reveal/open it. Returns the saved path.
+/// Errors if the PDF was never captured (statement predates the feature) — the
+/// message tells the user to re-scan.
+#[tauri::command]
+pub fn download_statement(app: AppHandle, id: i64) -> Result<String, String> {
+    let state = app.state::<AppState>();
+    let src = state.statement_pdf_path(id);
+    if !src.exists() {
+        return Err("Bu ekstrenin PDF'i kayıtlı değil. 'Tara'ya basıp tekrar deneyin.".into());
+    }
+    let row = state
+        .db
+        .get_statement(id)
+        .map_err(|e| e.to_string())?
+        .ok_or("Ekstre bulunamadı.")?;
+
+    let downloads = app
+        .path()
+        .download_dir()
+        .map_err(|e| format!("İndirilenler klasörü bulunamadı: {e}"))?;
+    let name = format!("{}_{}.pdf", sanitize_filename(&row.bank), row.due_date);
+    let dest = unique_path(downloads.join(name));
+
+    std::fs::copy(&src, &dest).map_err(|e| format!("PDF kaydedilemedi: {e}"))?;
+    reveal(&dest);
+    Ok(dest.to_string_lossy().into_owned())
+}
+
+/// Replace path-hostile characters (separators, Turkish quirks aside) with `_`.
+fn sanitize_filename(s: &str) -> String {
+    s.chars()
+        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+        .collect()
+}
+
+/// First free `name.pdf`, `name (1).pdf`, ... so repeated downloads never clobber.
+fn unique_path(path: std::path::PathBuf) -> std::path::PathBuf {
+    if !path.exists() {
+        return path;
+    }
+    let dir = path.parent().map(|p| p.to_path_buf()).unwrap_or_default();
+    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("ekstre").to_string();
+    let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("pdf").to_string();
+    for n in 1.. {
+        let candidate = dir.join(format!("{stem} ({n}).{ext}"));
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    path
+}
+
+/// Open the saved file with the OS default handler (macOS/Windows). Best-effort:
+/// the file is already saved, so a failure to open is non-fatal.
+fn reveal(path: &std::path::Path) {
+    #[cfg(target_os = "macos")]
+    let _ = std::process::Command::new("open").arg(path).spawn();
+    #[cfg(target_os = "windows")]
+    let _ = std::process::Command::new("cmd")
+        .args(["/C", "start", ""])
+        .arg(path)
+        .spawn();
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let _ = std::process::Command::new("xdg-open").arg(path).spawn();
 }

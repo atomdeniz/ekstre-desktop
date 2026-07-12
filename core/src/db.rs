@@ -92,6 +92,40 @@ impl Database {
         Ok(n > 0)
     }
 
+    /// The row id of a statement identified by its natural key (bank, card_last4,
+    /// due_date) — the same tuple the unique index dedups on. Lets the shell locate
+    /// the row after an insert (new or deduped) to name its stored PDF file.
+    pub fn statement_id(&self, s: &Statement) -> rusqlite::Result<Option<i64>> {
+        let conn = self.conn.lock().unwrap();
+        conn.query_row(
+            "SELECT id FROM card_statements
+             WHERE bank = ?1 AND ifnull(card_last4, '') = ifnull(?2, '') AND due_date = ?3",
+            params![s.bank, s.card_last4, s.due_date],
+            |r| r.get(0),
+        )
+        .map(Some)
+        .or_else(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => Ok(None),
+            other => Err(other),
+        })
+    }
+
+    /// A single statement row by id, for building a download filename.
+    pub fn get_statement(&self, id: i64) -> rusqlite::Result<Option<StatementRow>> {
+        let conn = self.conn.lock().unwrap();
+        conn.query_row(
+            "SELECT id, bank, card_last4, card_masked, total_due, min_due, due_date, statement_date, reminded_at
+             FROM card_statements WHERE id = ?1",
+            params![id],
+            row_to_statement,
+        )
+        .map(Some)
+        .or_else(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => Ok(None),
+            other => Err(other),
+        })
+    }
+
     /// Statements whose due date is within `days_before` days from today (past-due
     /// included) and not yet reminded, oldest first. `days_before` = 0 means "due
     /// today or earlier"; larger values fire the reminder that many days ahead.

@@ -21,6 +21,14 @@ pub struct ImapConfig {
     pub mailbox: String,
 }
 
+/// A parsed statement plus the raw source PDF bytes it came from, when the bank's
+/// source is `pdf` (body-source banks carry `None`). The shell persists the bytes
+/// so the dashboard can offer a "download statement PDF" action later.
+pub struct Scanned {
+    pub statement: Statement,
+    pub pdf: Option<Vec<u8>>,
+}
+
 /// Build a day-granular IMAP `SINCE` token (`DD-Mon-YYYY`) `days` before `today`,
 /// where `today` is `(year, month, day)`. English month names avoid locale issues.
 /// Kept pure (no clock) so it is unit-testable; the caller passes today's date.
@@ -38,7 +46,7 @@ pub fn scan(
     lookback_days: i64,
     today: (i32, u32, u32),
     pdfium: Option<&Pdfium>,
-) -> Result<Vec<Statement>, Box<dyn std::error::Error>> {
+) -> Result<Vec<Scanned>, Box<dyn std::error::Error>> {
     let tls = native_tls::TlsConnector::builder().build()?;
     let client = imap::connect((cfg.host.as_str(), cfg.port), cfg.host.as_str(), &tls)?;
     let mut session = client.login(&cfg.user, &cfg.password).map_err(|(e, _)| e)?;
@@ -62,8 +70,8 @@ pub fn scan(
             let fetches = session.uid_fetch(uid.to_string(), "BODY.PEEK[]")?;
             for fetch in fetches.iter() {
                 if let Some(body) = fetch.body() {
-                    if let Some(stmt) = parse_message(bank, body, pdfium) {
-                        out.push(stmt);
+                    if let Some(scanned) = parse_message(bank, body, pdfium) {
+                        out.push(scanned);
                     }
                 }
             }
@@ -74,8 +82,9 @@ pub fn scan(
     Ok(out)
 }
 
-/// Match one raw RFC822 message against a bank and parse it, or `None`.
-fn parse_message(bank: &Bank, raw: &[u8], pdfium: Option<&Pdfium>) -> Option<Statement> {
+/// Match one raw RFC822 message against a bank and parse it, or `None`. For
+/// `pdf`-source banks the matched PDF bytes ride along for later persistence.
+fn parse_message(bank: &Bank, raw: &[u8], pdfium: Option<&Pdfium>) -> Option<Scanned> {
     let msg = mail_parser::MessageParser::default().parse(raw)?;
 
     let from = header_text(msg.from());
@@ -89,19 +98,22 @@ fn parse_message(bank: &Bank, raw: &[u8], pdfium: Option<&Pdfium>) -> Option<Sta
         return None;
     }
 
-    let text = if bank.source == "pdf" {
+    let (text, pdf) = if bank.source == "pdf" {
         let pdfium = pdfium?;
-        first_pdf_text(&msg, pdfium)?
+        let (text, bytes) = first_pdf(&msg, pdfium)?;
+        (text, Some(bytes))
     } else {
         let plain = msg.body_text(0).unwrap_or_default();
         let html = msg.body_html(0).unwrap_or_default();
-        body_text(&plain, &html)
+        (body_text(&plain, &html), None)
     };
 
-    parse_statement(bank, &text)
+    let statement = parse_statement(bank, &text)?;
+    Some(Scanned { statement, pdf })
 }
 
-fn first_pdf_text(msg: &mail_parser::Message, pdfium: &Pdfium) -> Option<String> {
+/// Extracted text and raw bytes of the first extractable PDF attachment.
+fn first_pdf(msg: &mail_parser::Message, pdfium: &Pdfium) -> Option<(String, Vec<u8>)> {
     for att in msg.attachments() {
         let name_is_pdf = att
             .attachment_name()
@@ -109,7 +121,7 @@ fn first_pdf_text(msg: &mail_parser::Message, pdfium: &Pdfium) -> Option<String>
             .unwrap_or(false);
         if att.is_content_type("application", "pdf") || name_is_pdf {
             if let Ok(text) = pdf::extract_text(pdfium, att.contents()) {
-                return Some(text);
+                return Some((text, att.contents().to_vec()));
             }
         }
     }

@@ -47,7 +47,10 @@ function cardHtml(c) {
     : "";
   return `
     <div class="card" style="--accent:${c.color}">
-      <div class="top"><span class="bank" style="color:${c.color}">${c.bank}</span></div>
+      <div class="top">
+        <span class="bank" style="color:${c.color}">${c.bank}</span>
+        <button class="dl" data-id="${c.id}" title="Ekstre PDF'ini indir">⭳ PDF</button>
+      </div>
       <div class="masked">${c.card_masked ?? "-"}</div>
       <div class="amounts">
         <div><div class="amt-label">Dönem borcu</div><div class="amt-value">${c.total_due_fmt} TL</div></div>
@@ -57,6 +60,21 @@ function cardHtml(c) {
       <div class="meta"><span>Son ödeme: ${c.due_date}</span>${badge(c.days_left)}</div>
     </div>`;
 }
+
+cardsEl.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".dl");
+  if (!btn) return;
+  btn.disabled = true;
+  statusEl.textContent = "PDF indiriliyor…";
+  try {
+    const path = await invoke("download_statement", { id: Number(btn.dataset.id) });
+    statusEl.textContent = `İndirilenler'e kaydedildi: ${path}`;
+  } catch (err) {
+    statusEl.textContent = `Hata: ${err}`;
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 async function load() {
   try {

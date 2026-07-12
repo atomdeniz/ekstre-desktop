@@ -8,15 +8,28 @@
   </head>
   <body class="blur">
     <header>
-      <h1>💳 Kart Ekstreleri</h1>
-      <div class="actions">
-        <button id="toggle" class="btn">Tutarları göster/gizle</button>
-        <button id="poll" class="btn">Tara</button>
-        <button id="settings" class="btn icon" title="Ayarlar">⚙︎</button>
+      <div class="bar">
+        <h1>💳 Kart Ekstreleri</h1>
+        <div class="actions">
+          <button id="toggle" class="ic" title="Tutarları göster/gizle" aria-label="Tutarları göster/gizle">
+            <svg viewBox="0 0 24 24"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7S19 19 12 19 1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3.2"/></svg>
+          </button>
+          <button id="poll" class="ic" title="Tara" aria-label="Tara">
+            <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
+          </button>
+          <button id="settings" class="ic" title="Ayarlar" aria-label="Ayarlar">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="tabs">
+        <button id="tab-cards" class="tab active">Kartlar</button>
+        <button id="tab-calendar" class="tab">Takvim</button>
       </div>
     </header>
 
     <main id="cards"></main>
+    <section id="calendar" hidden></section>
 
     <p id="empty" class="empty" hidden>Henüz ekstre yok.</p>
     <p id="status" class="status"></p>

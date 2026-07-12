@@ -93,6 +93,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_statements,
+            commands::get_calendar,
             commands::is_configured,
             commands::list_banks,
             commands::poll_now,

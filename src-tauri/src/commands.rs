@@ -44,27 +44,40 @@ pub struct CardView {
     pub color: String,
 }
 
+fn to_card_view(
+    r: ekstre_core::db::StatementRow,
+    today: &str,
+    colors: &std::collections::HashMap<String, String>,
+) -> CardView {
+    CardView {
+        id: r.id,
+        days_left: days_left(&r.due_date, today),
+        color: colors.get(&r.bank).cloned().unwrap_or_else(|| "#666666".into()),
+        total_due_fmt: format_amount_tr(r.total_due),
+        min_due_fmt: r.min_due.map(format_amount_tr),
+        bank: r.bank,
+        card_masked: r.card_masked,
+        due_date: r.due_date,
+        statement_date: r.statement_date,
+    }
+}
+
 /// Latest statement per card, shaped for the dashboard.
 #[tauri::command]
 pub fn get_statements(state: State<AppState>) -> Result<Vec<CardView>, String> {
     let today = state.db.today_local().map_err(|e| e.to_string())?;
     let colors = state.colors();
     let rows = state.db.latest_per_card().map_err(|e| e.to_string())?;
-    let cards = rows
-        .into_iter()
-        .map(|r| CardView {
-            id: r.id,
-            days_left: days_left(&r.due_date, &today),
-            color: colors.get(&r.bank).cloned().unwrap_or_else(|| "#666666".into()),
-            total_due_fmt: format_amount_tr(r.total_due),
-            min_due_fmt: r.min_due.map(format_amount_tr),
-            bank: r.bank,
-            card_masked: r.card_masked,
-            due_date: r.due_date,
-            statement_date: r.statement_date,
-        })
-        .collect();
-    Ok(cards)
+    Ok(rows.into_iter().map(|r| to_card_view(r, &today, &colors)).collect())
+}
+
+/// Every stored statement, shaped like dashboard cards. Backs the calendar view.
+#[tauri::command]
+pub fn get_calendar(state: State<AppState>) -> Result<Vec<CardView>, String> {
+    let today = state.db.today_local().map_err(|e| e.to_string())?;
+    let colors = state.colors();
+    let rows = state.db.all_statements().map_err(|e| e.to_string())?;
+    Ok(rows.into_iter().map(|r| to_card_view(r, &today, &colors)).collect())
 }
 
 /// Whether the app has been configured (an email account is set).

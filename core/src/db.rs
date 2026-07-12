@@ -174,6 +174,21 @@ impl Database {
             .collect::<rusqlite::Result<Vec<_>>>()?;
         Ok(rows)
     }
+
+    /// Every stored statement, oldest due date first. Backs the calendar view,
+    /// which spans months and so needs history, not just the latest per card.
+    pub fn all_statements(&self) -> rusqlite::Result<Vec<StatementRow>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, bank, card_last4, card_masked, total_due, min_due, due_date, statement_date, reminded_at
+             FROM card_statements
+             ORDER BY due_date",
+        )?;
+        let rows = stmt
+            .query_map([], row_to_statement)?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
+    }
 }
 
 impl Database {

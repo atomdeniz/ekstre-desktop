@@ -52,8 +52,19 @@ cat ~/.tauri/ekstre-updater.key | pbcopy
 `github.com/atomdeniz/ekstre-desktop` reposuna işaret ediyor. Repo adın farklıysa
 burayı ve `release.yml`'deki pdfium sürümünü güncelle.
 
-## Windows (sonraki aşama)
+## Windows
 
-Yapı hazır; `release.yml`'e `windows-latest` job'ı eklenip imza için
-[SignPath](https://signpath.io) (açık kaynak ücretsiz) veya Azure Trusted Signing
-bağlanır. pdfium için `pdfium-win-x64.tgz` indirilir.
+Release workflow artık **Windows'u da** üretiyor (matrix): `windows-latest`'te
+`pdfium.dll` indiriliyor, NSIS `.exe` kurulum + updater artifact'leri oluşup aynı
+sürüme yükleniyor. Ekstra secret gerekmez — updater imzası zaten ortak.
+
+**İmzalama (henüz yok):** Windows build şu an **imzasız**, yani ilk çalıştırmada
+SmartScreen "bilinmeyen yayıncı" uyarısı çıkar (geçilebilir: "Daha fazla bilgi →
+Yine de çalıştır"). Non-tech kullanıcı için bunu kaldırmak istersen imza ekle:
+
+- **[SignPath](https://signpath.io)** — açık kaynak projelere **ücretsiz** kod
+  imzalama sunar (başvuru/onay gerekir). Önerilen yol.
+- **Azure Trusted Signing** — ~$10/ay, hızlı kurulum.
+
+İmza eklenince `tauri-action`'a Windows imza env'leri (ör. SignPath action'ı ya da
+`certificateThumbprint`) bağlanır; pipeline'ın geri kalanı aynı kalır.

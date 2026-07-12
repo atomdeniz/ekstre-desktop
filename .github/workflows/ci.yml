@@ -6,8 +6,12 @@ on:
   pull_request:
 
 jobs:
-  test:
-    runs-on: macos-latest
+  ci:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -16,7 +20,7 @@ jobs:
           workspaces: "."
       - name: Run core tests
         run: cargo test -p ekstre-core
-      # Compile the full desktop app so macOS-specific breakage is caught before
-      # tagging a release (compilation only — no pdfium/signing needed here).
+      # Compile the full desktop app so platform-specific breakage is caught
+      # before tagging a release (compilation only — no pdfium/signing needed).
       - name: Build the app (compile check)
         run: cargo build -p ekstre-desktop

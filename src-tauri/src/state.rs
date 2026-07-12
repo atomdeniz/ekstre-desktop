@@ -19,6 +19,8 @@ pub struct Config {
     pub lookback_days: i64,
     pub poll_interval_min: u64,
     pub reminder_hour: u32,
+    /// How many days before the due date to fire the reminder (0 = on the due day).
+    pub reminder_days_before: i64,
     /// Selected bank names; empty means "all built-in banks".
     pub selected_banks: Vec<String>,
 }
@@ -44,6 +46,7 @@ impl Config {
             lookback_days: Self::get(db, "lookback_days", "45").parse().unwrap_or(45),
             poll_interval_min: Self::get(db, "poll_interval_min", "15").parse().unwrap_or(15),
             reminder_hour: Self::get(db, "reminder_hour", "9").parse().unwrap_or(9),
+            reminder_days_before: Self::get(db, "reminder_days_before", "3").parse().unwrap_or(3),
             selected_banks,
         }
     }

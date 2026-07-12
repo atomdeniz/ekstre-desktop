@@ -6,7 +6,7 @@
 
 use std::time::Duration;
 
-use ekstre_core::{reminder_body, reminder_title};
+use ekstre_core::{days_left, reminder_body, reminder_title_lead};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_notification::NotificationExt;
 
@@ -42,18 +42,20 @@ fn run_reminders(app: &AppHandle, state: &AppState, cfg: &Config) {
     if hour < cfg.reminder_hour {
         return;
     }
-    let rows = match state.db.due_unreminded() {
+    let rows = match state.db.due_unreminded(cfg.reminder_days_before) {
         Ok(r) => r,
         Err(e) => {
             log::warn!("due_unreminded failed: {e}");
             return;
         }
     };
+    let today = state.db.today_local().unwrap_or_default();
     for row in rows {
+        let left = days_left(&row.due_date, &today).unwrap_or(0);
         let sent = app
             .notification()
             .builder()
-            .title(reminder_title(&row))
+            .title(reminder_title_lead(&row, left))
             .body(reminder_body(&row))
             .show();
         match sent {

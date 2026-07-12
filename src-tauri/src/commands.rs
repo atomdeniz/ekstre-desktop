@@ -137,6 +137,7 @@ pub fn update_settings(
     state: State<AppState>,
     form: ImapForm,
     selected_banks: Vec<String>,
+    reminder_days_before: i64,
 ) -> Result<(), String> {
     if !form.password.is_empty() {
         state.set_imap_password(&form.user, &form.password)?;
@@ -147,6 +148,7 @@ pub fn update_settings(
         ("imap_user", form.user.clone()),
         ("imap_mailbox", form.mailbox.clone()),
         ("selected_banks", selected_banks.join(",")),
+        ("reminder_days_before", reminder_days_before.max(0).to_string()),
     ];
     for (k, v) in settings {
         state.db.set_setting(k, &v).map_err(|e| e.to_string())?;

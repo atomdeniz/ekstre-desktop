@@ -12,6 +12,7 @@ const portEl = document.getElementById("port");
 const userEl = document.getElementById("user");
 const passwordEl = document.getElementById("password");
 const mailboxEl = document.getElementById("mailbox");
+const reminderDaysEl = document.getElementById("reminder-days");
 const serverFieldsEl = document.getElementById("server-fields");
 const hintEl = document.getElementById("pw-hint");
 const testResult = document.getElementById("test-result");
@@ -39,6 +40,8 @@ async function init() {
 
   userEl.value = settings.imap_user || "";
   mailboxEl.value = settings.imap_mailbox || "INBOX";
+  reminderDaysEl.value =
+    settings.reminder_days_before != null ? settings.reminder_days_before : 3;
   const host = settings.imap_host || "imap.gmail.com";
   const port = Number(settings.imap_port) || 993;
   const providerId = providerForHost(host);
@@ -100,8 +103,13 @@ document.getElementById("save").addEventListener("click", async () => {
   const selected = [...document.querySelectorAll("#bank-list input:checked")].map(
     (i) => i.value
   );
+  const reminderDaysBefore = Math.max(0, Number(reminderDaysEl.value) || 0);
   try {
-    await invoke("update_settings", { form: f, selectedBanks: selected });
+    await invoke("update_settings", {
+      form: f,
+      selectedBanks: selected,
+      reminderDaysBefore,
+    });
     window.location.href = "index.html";
   } catch (e) {
     alert(`Kaydedilemedi: ${e}`);

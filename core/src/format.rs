@@ -48,7 +48,18 @@ pub fn reminder_text(row: &StatementRow) -> String {
 
 /// Native-notification title for a due statement (short, single line).
 pub fn reminder_title(row: &StatementRow) -> String {
-    format!("💳 {} — son ödeme günü", row.bank)
+    reminder_title_lead(row, 0)
+}
+
+/// Title variant that reflects how many days are left until the due date:
+/// ahead ("son ödemeye N gün"), on the day, or overdue.
+pub fn reminder_title_lead(row: &StatementRow, days_left: i64) -> String {
+    let tail = match days_left {
+        d if d > 0 => format!("son ödemeye {d} gün"),
+        0 => "son ödeme günü".to_string(),
+        _ => "son ödeme tarihi geçti".to_string(),
+    };
+    format!("💳 {} — {tail}", row.bank)
 }
 
 pub fn reminder_body(row: &StatementRow) -> String {

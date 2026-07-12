@@ -12,6 +12,8 @@ pub mod pdf;
 
 pub use banks::{builtin_banks, load_banks_str, Bank};
 pub use db::{Database, StatementRow};
-pub use format::{days_left, format_amount_tr, reminder_body, reminder_text, reminder_title};
+pub use format::{
+    days_left, format_amount_tr, reminder_body, reminder_text, reminder_title, reminder_title_lead,
+};
 pub use matcher::{body_text, header_matches, matches, strip_html};
 pub use parser::{parse_amount, parse_date, parse_statement, Statement};

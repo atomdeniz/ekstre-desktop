@@ -92,17 +92,20 @@ impl Database {
         Ok(n > 0)
     }
 
-    /// Statements due today or earlier that have not been reminded yet, oldest first.
-    pub fn due_unreminded(&self) -> rusqlite::Result<Vec<StatementRow>> {
+    /// Statements whose due date is within `days_before` days from today (past-due
+    /// included) and not yet reminded, oldest first. `days_before` = 0 means "due
+    /// today or earlier"; larger values fire the reminder that many days ahead.
+    pub fn due_unreminded(&self, days_before: i64) -> rusqlite::Result<Vec<StatementRow>> {
         let conn = self.conn.lock().unwrap();
+        let modifier = format!("+{} days", days_before.max(0));
         let mut stmt = conn.prepare(
             "SELECT id, bank, card_last4, card_masked, total_due, min_due, due_date, statement_date, reminded_at
              FROM card_statements
-             WHERE due_date <= date('now','localtime') AND reminded_at IS NULL
+             WHERE due_date <= date('now','localtime',?1) AND reminded_at IS NULL
              ORDER BY due_date",
         )?;
         let rows = stmt
-            .query_map([], row_to_statement)?
+            .query_map([modifier], row_to_statement)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         Ok(rows)
     }

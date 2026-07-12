@@ -1,3 +1,6 @@
+# Own workspace root so this app builds into src-tauri/target (see ../Cargo.toml).
+[workspace]
+
 [package]
 name = "ekstre-desktop"
 version = "0.1.0"

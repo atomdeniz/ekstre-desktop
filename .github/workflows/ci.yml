@@ -45,4 +45,4 @@ jobs:
       # Compile the full app so platform-specific breakage is caught before a
       # release tag (compilation only — no bundling or signing).
       - name: Build the app (compile check)
-        run: cargo build -p ekstre-desktop
+        run: cargo build --manifest-path src-tauri/Cargo.toml

@@ -1,3 +1,7 @@
 [workspace]
-members = ["core", "src-tauri"]
+members = ["core"]
+# src-tauri is intentionally NOT a workspace member: as a standalone crate it
+# builds into src-tauri/target, which is where tauri-action looks for bundle
+# artifacts (a workspace-root target dir breaks its artifact detection).
+exclude = ["src-tauri"]
 resolver = "2"

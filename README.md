@@ -1,79 +1,130 @@
-# Ekstre Desktop
+# Ekstre
 
-Türk kredi kartı ekstrelerini takip eden bir **masaüstü uygulaması** (macOS, sonra Windows).
-Sunucu ya da Docker istemez: uygulamayı indir, kur, menü çubuğunda çalışsın. E-posta kutunu
-(salt-okunur) tarar, banka ekstrelerini ayrıştırır, yerel bir SQLite'a yazar ve son ödeme günü
-**işletim sisteminin native bildirimini** gönderir. Verin bu bilgisayardan çıkmaz.
+**Never miss a credit-card payment again.** Ekstre is a small desktop app for
+macOS and Windows that reads your bank's statement emails, understands them, and
+reminds you before each payment is due — with a native notification, right from
+your menu bar or system tray.
 
-> Bu, Docker'da çalışan self-hosted [`ekstre`](../ekstre) projesinin masaüstü yeniden yazımıdır.
-> Çekirdek (ayrıştırma/depolama/eşleştirme) Python'dan Rust'a portlandı; davranış, taşınan altın
-> testlerle birebir korunuyor.
+No server, no Docker, no accounts. You download it, connect your email once, and
+it quietly does the rest. **Your data never leaves your computer.**
 
-## Durum
+> Turkish banks send credit-card statements by email. Ekstre reads those emails,
+> pulls out the amount due and the due date, and makes sure you see them in time.
 
-Yapım aşamasında. Milestone'lar:
+## Features
 
-- [x] **M1 — Çekirdek port + altın testler.** `core/` crate: banka tanımları, statement
-      ayrıştırma, SQLite depolama/dedup, hatırlatma-uygunluğu, Türkçe tutar biçimi, From/Subject
-      eşleştirme, IMAP taraması, pdfium metin çıkarma. `cargo test` yeşil. Regex'ler **gerçek 2026
-      TEB/Enpara/İş Bankası PDF ekstrelerine** karşı doğrulandı.
-- [x] **M2 — Tauri kabuk + tray/menübar + dashboard.** `src-tauri/` + vanilla `ui/`. Menü çubuğu
-      ikonu (Panoyu aç / Şimdi tara / Çıkış), pencere kapatınca tray'de kalma, `invoke` komutları
-      (`get_statements`, `poll_now`, `list_banks`, ayarlar). Uygulama temiz açılıyor; veri akışı
-      gerçek PDF'lerle uçtan uca doğrulandı.
-- [x] **M3 — Scheduler + native bildirim + uyanma/misfire.** Arka plan thread'i: periyodik poll +
-      günlük hatırlatma taraması. Uyku/uyanma sonrası kaçan hatırlatmalar `due_unreminded` her döngüde
-      yeniden kontrol edilerek yakalanır. Native bildirim `tauri-plugin-notification` ile.
-- [x] **M4 — Setup wizard + Keychain + IMAP/PDF entegrasyonu.** İlk açılışta çok adımlı sihirbaz
-      (hoş geldin/gizlilik → e-posta + "bağlantıyı test et" → banka seçimi). IMAP parolası macOS
-      Keychain'de saklanır; `test_imap` gerçek bağlantı kurup bulunan ekstre sayısını döndürür.
-- [x] **M5 — İmzalama + notarization + auto-update.** `tauri-plugin-updater` + imzalı `latest.json`;
-      pdfium bundle kaynağı olarak gömülü; GitHub Actions CI (testler) + release workflow (macOS
-      universal build, Developer ID imza + notarization, updater artifact'leri). Bkz.
-      [`docs/RELEASING.md`](docs/RELEASING.md) — gereken secret'lar ve updater anahtarı.
+- **Reads your statements automatically** — scans your mailbox over IMAP
+  (read-only; it never marks anything as read) and recognizes statement emails
+  from the banks you choose.
+- **Understands email and PDF statements** — parses the amount due, minimum
+  payment, statement date, and due date, whether they're in the email body or a
+  PDF attachment.
+- **Reminds you on time** — a native macOS/Windows notification on the due day, so
+  a payment never slips by. Reminders survive sleep/wake, so a laptop that was
+  closed at 9 a.m. still gets reminded when it wakes up.
+- **A clean dashboard** — the latest statement per card at a glance: amount, due
+  date, and a color-coded "days left" badge. Blur amounts with one click for
+  privacy in public.
+- **Lives in your menu bar / tray** — starts at login, runs quietly in the
+  background, out of your way.
+- **Private by design** — see below.
 
-## Mimari
+## Privacy
+
+Ekstre stores everything (statements, account settings) **only on your own
+device**. It never sends your data to any server and collects no telemetry. Your
+mailbox is scanned **read-only**, and your email password is kept in the operating
+system's secure store (macOS Keychain / Windows Credential Manager) — never in
+plain text.
+
+## Supported banks
+
+Out of the box: **TEB**, **Enpara**, and **İş Bankası**, verified against real
+statement PDFs. Bank definitions are simple config entries, so adding a bank is a
+small pull request rather than a code change — see [Adding a bank](#adding-a-bank).
+
+## Download & install
+
+Grab the latest build from the
+[Releases](https://github.com/atomdeniz/ekstre-desktop/releases) page:
+
+- **macOS** — a `.dmg`, signed with an Apple Developer ID and notarized by Apple,
+  so it opens without security warnings.
+- **Windows** — an installer (`.exe`); Windows builds are code-signed via the
+  [SignPath Foundation](https://signpath.org) open-source program.
+
+The app updates itself automatically, so you install once and stay current.
+
+### First run
+
+On first launch a short setup wizard walks you through:
+
+1. Choosing your email provider (Gmail, Outlook/Hotmail, Yahoo, iCloud, or a
+   custom IMAP server).
+2. Connecting your mailbox. For Gmail (and most providers) you'll create an
+   **app-specific password** — the wizard links you to the right page. A **Test
+   connection** button confirms it works and shows how many statements it found.
+3. Selecting which banks to track.
+
+That's it. Ekstre then checks periodically and reminds you when a payment is due.
+
+## How it works
 
 ```
-Tauri kabuk (Rust) ── tray · native bildirim · autostart · updater · scheduler
-   └─ core (bu crate) ── banks · parser · db · format · matcher   ← Python app/ portu
-Webview (vanilla HTML/JS) ── setup wizard · dashboard · ayarlar
+Tauri shell (Rust) ── tray · native notifications · autostart · auto-update · scheduler
+   └─ core ── bank definitions · statement parser · SQLite store · matching
+Webview (HTML/JS) ── setup wizard · dashboard · settings
 ```
 
-HTTP sunucusu ve Telegram yok; masaüstünde Rust ↔ webview `invoke`/`emit` ile konuşur ve
-bildirimler işletim sisteminin kendisinden gider.
+A Rust core does the parsing and storage; a thin Tauri shell provides the window,
+tray, notifications, and background scheduling; a small HTML/JS front end is the
+UI. There is no HTTP server — the UI talks to the core directly over Tauri's IPC,
+and notifications come from the operating system itself.
 
-## Geliştirme
+## Development
+
+Prerequisites: [Rust](https://rustup.rs) and the
+[Tauri CLI](https://v2.tauri.app/start/) (`cargo install tauri-cli --version "^2"`).
 
 ```bash
-cargo test -p ekstre-core        # çekirdek altın testleri
-cargo tauri dev                  # uygulamayı çalıştır (menü çubuğu + pencere)
+cargo test -p ekstre-core      # run the core test suite
+cargo tauri dev                # run the app (menu bar + window)
+cargo build -p ekstre-desktop  # compile the whole app
 ```
 
-pdfium için `vendor/pdfium/lib/libpdfium.dylib` gerekir (bir kez indirilir; CI
-platforma göre otomatik indirir). Gerçek bir taramayı test etmek için Gmail
-uygulama şifreni sihirbaza gir.
+PDF parsing uses [pdfium](https://github.com/bblanchon/pdfium-binaries). For local
+development, place `libpdfium.dylib` in `vendor/pdfium/lib/` (downloaded once); CI
+and release builds fetch the right binary per platform automatically.
 
-Sürüm çıkarma ve imzalama için [`docs/RELEASING.md`](docs/RELEASING.md).
+To try a real scan, enter your email app-password in the setup wizard.
 
-Banka tanımları [`core/banks/banks.yml`](core/banks/banks.yml) içinde derlemeye gömülü;
-kullanıcı düzenlemez, wizard'da checkbox ile seçer. Yeni banka eklemek bir YAML girdisidir
-(topluluk PR'ı) — kod değişikliği değil.
+## Adding a bank
 
-## Gizlilik
+Bank definitions live in [`core/banks/banks.yml`](core/banks/banks.yml) and are
+compiled into the app; users pick from them with checkboxes and never edit YAML.
+Each entry is a display name, a color, From/Subject match rules, a source
+(`body` or `pdf`), and a set of field regexes:
 
-Ekstre tüm verini (ekstreler, hesap bilgileri) yalnızca **kendi cihazında** saklar;
-hiçbir sunucuya veri göndermez, telemetri toplamaz. E-posta kutun **salt-okunur**
-taranır ve hiçbir e-posta okundu olarak işaretlenmez. IMAP parolan işletim sisteminin
-güvenli deposunda (macOS Keychain / Windows Credential Manager) tutulur.
+```yaml
+- name: My Bank
+  color: "#123456"
+  match: { from: mybank.com, subject: Statement }
+  source: pdf            # or "body" for the plain-text email
+  fields:
+    card: 'Card No:\s*(\d{4})\*+(\d{4})'          # 2 groups: first4, last4
+    total_due: 'Total Due:\s*([\d.]+,\d{2})'       # Turkish amount, e.g. 1.234,56
+    due_date: 'Due Date:\s*(\d{2})[./](\d{2})[./](\d{4})'  # day, month, year
+```
 
-## İndirme ve kod imzalama
+A statement is stored only when both `total_due` and `due_date` match. Add your
+bank, verify it against a real statement, and open a pull request.
 
-Kurulum dosyaları [Releases](https://github.com/atomdeniz/ekstre-desktop/releases)
-sayfasındadır. Windows derlemeleri [SignPath Foundation](https://signpath.org)'ın açık
-kaynak programı aracılığıyla kod-imzalanır; macOS derlemeleri Apple Developer ID ile
-imzalanıp notarize edilir.
+## Releasing
 
-## Lisans
+Tagging a version (`git tag v0.1.0 && git push origin v0.1.0`) builds, signs,
+notarizes, and publishes macOS and Windows releases with auto-update artifacts.
+See [`docs/RELEASING.md`](docs/RELEASING.md) for the required secrets and setup.
 
-MIT.
+## License
+
+[MIT](LICENSE)

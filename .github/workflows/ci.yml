@@ -18,9 +18,31 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: "."
+
+      # tauri-build checks that the bundled pdfium exists at compile time, so
+      # fetch it even for the compile check.
+      - name: Fetch libpdfium (macOS)
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          mkdir -p src-tauri/resources/pdfium
+          curl -sL "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/7934/pdfium-mac-univ.tgz" -o pdfium.tgz
+          mkdir pdfium-extract && tar xzf pdfium.tgz -C pdfium-extract
+          cp pdfium-extract/lib/libpdfium.dylib src-tauri/resources/pdfium/libpdfium.dylib
+
+      - name: Fetch pdfium.dll (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          mkdir -p src-tauri/resources/pdfium
+          curl -sL "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/7934/pdfium-win-x64.tgz" -o pdfium.tgz
+          mkdir pdfium-extract && tar xzf pdfium.tgz -C pdfium-extract
+          cp pdfium-extract/bin/pdfium.dll src-tauri/resources/pdfium/pdfium.dll
+
       - name: Run core tests
         run: cargo test -p ekstre-core
-      # Compile the full desktop app so platform-specific breakage is caught
-      # before tagging a release (compilation only — no pdfium/signing needed).
+
+      # Compile the full app so platform-specific breakage is caught before a
+      # release tag (compilation only — no bundling or signing).
       - name: Build the app (compile check)
         run: cargo build -p ekstre-desktop

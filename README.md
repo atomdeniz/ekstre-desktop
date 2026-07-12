@@ -5,11 +5,12 @@ macOS and Windows that reads your bank's statement emails, understands them, and
 reminds you before each payment is due — with a native notification, right from
 your menu bar or system tray.
 
+> **Made for Turkey.** Ekstre understands the statement emails and PDFs sent by
+> Turkish banks (see [Supported banks](#supported-banks)). It parses Turkish
+> number and date formats, so it's built specifically for cards issued in Turkey.
+
 No server, no Docker, no accounts. You download it, connect your email once, and
 it quietly does the rest. **Your data never leaves your computer.**
-
-> Turkish banks send credit-card statements by email. Ekstre reads those emails,
-> pulls out the amount due and the due date, and makes sure you see them in time.
 
 ## Features
 
@@ -39,9 +40,15 @@ plain text.
 
 ## Supported banks
 
-Out of the box: **TEB**, **Enpara**, and **İş Bankası**, verified against real
-statement PDFs. Bank definitions are simple config entries, so adding a bank is a
-small pull request rather than a code change — see [Adding a bank](#adding-a-bank).
+Out of the box, verified against real statement PDFs:
+
+- **TEB**
+- **Enpara**
+- **İş Bankası**
+- **Yapı Kredi**
+
+Bank definitions are simple config entries, so adding a bank is a small pull
+request rather than a code change — see [Adding a bank](#adding-a-bank).
 
 ## Download & install
 

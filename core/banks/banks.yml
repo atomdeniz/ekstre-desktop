@@ -80,3 +80,14 @@ banks:
       min_due: 'En Az Ödeme Tutarı\s*:?\s*([\d,]+\.\d{2})\s*TL'
       due_date: 'Son Ödeme Tarihi\s*:?\s*(\d{2})[./](\d{2})[./](\d{4})'
       statement_date: 'Hesap Kesim Tarihi\s*:?\s*(\d{2})[./](\d{2})[./](\d{4})'
+
+  - name: Ziraat Bankası
+    color: "#e2001a"
+    match: { from: ziraatbank.com.tr, subject: E-Ekstre Servisi }
+    source: pdf
+    fields:
+      card: '(\d{4})-#+-#+-(\d{4})'
+      total_due: 'Dönem Borcu TL\s*:?\s*([\d.]+,(?:\d{2}|-))'
+      min_due: 'Asgari Ödeme Tutarı TL\s*:?\s*([\d.]+,(?:\d{2}|-))'
+      due_date: '(?m)^Son Ödeme Tarihi\s*:?\s*(\d{2})[./](\d{2})[./](\d{4})'
+      statement_date: '(?m)^Hesap Kesim Tarihi\s*:?\s*(\d{2})[./](\d{2})[./](\d{4})'

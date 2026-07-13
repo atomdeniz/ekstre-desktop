@@ -138,6 +138,19 @@ fn test_axess_business() {
 }
 
 #[test]
+fn test_ziraat() {
+    let b = banks();
+    let s = parse_statement(&b["Ziraat Bankası"], &fixture("ziraat.txt")).unwrap();
+    assert_eq!(s.bank, "Ziraat Bankası");
+    assert_eq!(s.card_last4.as_deref(), Some("5678"));
+    assert_eq!(s.card_masked.as_deref(), Some("1234 **** **** 5678"));
+    assert_eq!(s.total_due, 8750.25); // "Dönem Borcu TL", not the USD line
+    assert_eq!(s.min_due, Some(1750.05));
+    assert_eq!(s.due_date, "2026-07-13"); // current, not "Sonraki Son Ödeme Tarihi"
+    assert_eq!(s.statement_date.as_deref(), Some("2026-07-03"));
+}
+
+#[test]
 fn test_missing_required_returns_none() {
     let b = banks();
     assert!(parse_statement(&b["TEB"], "hiçbir şey yok").is_none());

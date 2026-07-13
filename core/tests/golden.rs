@@ -7,7 +7,8 @@ use std::fs;
 use std::path::Path;
 
 use ekstre_core::{
-    builtin_banks, parse_amount, parse_date, parse_statement, Bank, Database, Statement,
+    builtin_banks, parse_amount, parse_amount_us, parse_date, parse_statement, Bank, Database,
+    Statement,
 };
 
 fn banks() -> HashMap<String, Bank> {
@@ -29,6 +30,14 @@ fn test_parse_amount() {
     // Turkish round-amount shorthand ",-" means ",00" (seen in TEB PDFs).
     assert_eq!(parse_amount("24.396,-"), 24396.0);
     assert_eq!(parse_amount("1.234,-"), 1234.0);
+}
+
+#[test]
+fn test_parse_amount_us() {
+    // Akbank business statements: comma thousands, dot decimal.
+    assert_eq!(parse_amount_us("10,964.11"), 10964.11);
+    assert_eq!(parse_amount_us("2,741.03"), 2741.03);
+    assert_eq!(parse_amount_us("125.00"), 125.0);
 }
 
 #[test]
@@ -97,6 +106,35 @@ fn test_yapikredi() {
     assert_eq!(s.min_due, Some(1181.02));
     assert_eq!(s.due_date, "2026-05-07");
     assert_eq!(s.statement_date.as_deref(), Some("2026-04-27"));
+}
+
+#[test]
+fn test_garanti() {
+    let b = banks();
+    let s = parse_statement(&b["Garanti BBVA"], &fixture("garanti.txt")).unwrap();
+    assert_eq!(s.bank, "Garanti BBVA");
+    assert_eq!(s.card_last4.as_deref(), Some("3210"));
+    assert_eq!(s.card_masked.as_deref(), Some("4444 **** **** 3210"));
+    assert_eq!(s.total_due, 1234.56);
+    assert_eq!(s.min_due, Some(370.0));
+    assert_eq!(s.due_date, "2026-06-27");
+    assert_eq!(s.statement_date.as_deref(), Some("2026-06-17"));
+}
+
+#[test]
+fn test_axess_business() {
+    let b = banks();
+    let s = parse_statement(&b["Axess Business"], &fixture("akbank.txt")).unwrap();
+    assert_eq!(s.bank, "Axess Business");
+    // Business statements mask the whole card number -> fallback label.
+    assert_eq!(s.card_last4, None);
+    assert_eq!(s.card_masked.as_deref(), Some("Axess Business"));
+    // US-formatted amounts (1,234.56).
+    assert_eq!(s.total_due, 12345.67);
+    assert_eq!(s.min_due, Some(3086.42));
+    // "Son Ödeme Tarihi" must win over the later "Bir Sonraki Son Ödeme Tarihi".
+    assert_eq!(s.due_date, "2026-12-05");
+    assert_eq!(s.statement_date.as_deref(), Some("2026-11-30"));
 }
 
 #[test]

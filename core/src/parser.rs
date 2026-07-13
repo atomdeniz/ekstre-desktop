@@ -1,4 +1,4 @@
-use crate::banks::Bank;
+use crate::banks::{AmountFormat, Bank};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Statement {
@@ -23,6 +23,12 @@ pub fn parse_amount(raw: &str) -> f64 {
         .replace(',', ".")
         .parse()
         .unwrap()
+}
+
+/// US-formatted amount to `f64`: strip thousands `,`, keep the decimal `.`.
+/// `"10,964.11"` -> `10964.11`. Akbank's business statements use this format.
+pub fn parse_amount_us(raw: &str) -> f64 {
+    raw.replace(',', "").parse().unwrap()
 }
 
 /// Three groups (day, month, year) to zero-padded ISO `YYYY-MM-DD`. `month` is a
@@ -62,6 +68,11 @@ pub fn parse_statement(bank: &Bank, text: &str) -> Option<Statement> {
     let card_m = bank.fields.get("card").and_then(|r| r.captures(text));
     let stmt_m = bank.fields.get("statement_date").and_then(|r| r.captures(text));
 
+    let amount = |raw: &str| match bank.amount_format {
+        AmountFormat::Us => parse_amount_us(raw),
+        AmountFormat::Tr => parse_amount(raw),
+    };
+
     let (card_last4, card_masked) = match card_m {
         Some(c) => {
             let first4 = c.get(1).unwrap().as_str();
@@ -78,8 +89,8 @@ pub fn parse_statement(bank: &Bank, text: &str) -> Option<Statement> {
         bank: bank.name.clone(),
         card_last4,
         card_masked,
-        total_due: parse_amount(total_m.get(1).unwrap().as_str()),
-        min_due: min_m.map(|m| parse_amount(m.get(1).unwrap().as_str())),
+        total_due: amount(total_m.get(1).unwrap().as_str()),
+        min_due: min_m.map(|m| amount(m.get(1).unwrap().as_str())),
         due_date: parse_date(
             due_m.get(1).unwrap().as_str(),
             due_m.get(2).unwrap().as_str(),

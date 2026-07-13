@@ -6,6 +6,18 @@ use std::collections::HashMap;
 /// the setup wizard; new banks are added here via community PRs.
 const BUILTIN_YML: &str = include_str!("../banks/banks.yml");
 
+/// How a bank writes amounts. Turkish is the default; Akbank's business
+/// statements are the exception.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AmountFormat {
+    /// `1.234,56` — dot thousands, comma decimal.
+    #[default]
+    Tr,
+    /// `1,234.56` — comma thousands, dot decimal.
+    Us,
+}
+
 /// A bank definition with compiled, case-insensitive field regexes.
 #[derive(Debug, Clone)]
 pub struct Bank {
@@ -16,6 +28,7 @@ pub struct Bank {
     pub match_from: Option<String>,
     pub match_subject: Option<String>,
     pub fallback_masked: Option<String>,
+    pub amount_format: AmountFormat,
     pub fields: HashMap<String, Regex>,
 }
 
@@ -39,6 +52,8 @@ struct RawBank {
     #[serde(rename = "match")]
     match_field: Option<RawMatch>,
     fallback_masked: Option<String>,
+    #[serde(default)]
+    amount_format: AmountFormat,
     #[serde(default)]
     fields: HashMap<String, String>,
 }
@@ -65,6 +80,7 @@ pub fn load_banks_str(yaml: &str) -> Result<Vec<Bank>, Box<dyn std::error::Error
             match_from,
             match_subject,
             fallback_masked: b.fallback_masked,
+            amount_format: b.amount_format,
             fields,
         });
     }

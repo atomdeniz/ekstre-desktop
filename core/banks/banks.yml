@@ -55,3 +55,28 @@ banks:
       min_due: 'Ödenmesi Gereken Asgari Tutar(?:/Oran)?\s*:?\s*([\d.]+,\d{2})\s*TL'
       due_date: 'Son Ödeme Tarihi\s*:?\s*(\d{1,2})\s+(\S+)\s+(\d{4})'
       statement_date: 'Hesap Kesim Tarihi\s*:?\s*(\d{1,2})\s+(\S+)\s+(\d{4})'
+
+  - name: Garanti BBVA
+    color: "#00a94f"
+    match: { from: garantibbva.com.tr, subject: Ekstre }
+    source: pdf
+    fields:
+      card: 'Kart Numarası\s*:?\s*(\d{4})\s*\d{2}\*+\s*\*+\s*(\d{4})'
+      total_due: 'Dönem Borcunuz\s*:?\s*([\d.]+,(?:\d{2}|-))\s*TL'
+      min_due: 'Min\. Ödeme Tutarı\s*:?\s*([\d.]+,(?:\d{2}|-))\s*TL'
+      due_date: 'Son Ödeme Tarihi\s*:?\s*(\d{1,2})\s+(\S+)\s+(\d{4})'
+      statement_date: 'Hesap Kesim Tarihi\s*:?\s*(\d{1,2})\s+(\S+)\s+(\d{4})'
+
+  # Akbank business (Axess Business / Şirket) statements use US amount formatting
+  # (1,234.56) and mask the whole card number, unlike every other bank here.
+  - name: Axess Business
+    color: "#e4002b"
+    match: { from: akbank.com, subject: Axess Business }
+    source: pdf
+    amount_format: us
+    fallback_masked: "Axess Business"
+    fields:
+      total_due: 'Dönem Borcu\s*:?\s*([\d,]+\.\d{2})\s*TL'
+      min_due: 'En Az Ödeme Tutarı\s*:?\s*([\d,]+\.\d{2})\s*TL'
+      due_date: 'Son Ödeme Tarihi\s*:?\s*(\d{2})[./](\d{2})[./](\d{4})'
+      statement_date: 'Hesap Kesim Tarihi\s*:?\s*(\d{2})[./](\d{2})[./](\d{4})'

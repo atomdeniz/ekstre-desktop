@@ -1,0 +1,11 @@
+Bonus Platinum Bilgileriniz
+Müşteri Numarası 12345678
+Müşteri Limiti 20.000,00 TL
+Kart Numarası 4444 55** **** 3210
+Hesap Kesim Tarihi 17 Haziran 2026
+Son Ödeme Tarihi 27 Haziran 2026
+Dönem Borcunuz 1.234,56 TL
+Min. Ödeme Tutarı 370,00 TL
+
+Önceki Bakiye Dönem Harcamaları Faiz ve Ücretler Ödemeleriniz Dönem Borcunuz Min. Ödeme Tutarınız
+1.000,00 TL + 234,56 TL + 0,00 TL - 0,00 TL = 1.234,56 TL 370,00 TL

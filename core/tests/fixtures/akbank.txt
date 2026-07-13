@@ -1,0 +1,13 @@
+Şirket Kredi Kartı Ekstresi
+Müşteri No 87654321
+Dönem Borcu 12,345.67 TL
+En Az Ödeme Tutarı 3,086.42 TL
+Son Ödeme Tarihi 05.12.2026
+Hesap Kesim Tarihi 30.11.2026
+Bir Sonraki Hesap Kesim Tarihi 30.12.2026
+Bir Sonraki Son Ödeme Tarihi 04.01.2027
+Kart Numarası İşlem Tarihi Dönem İçi İşlemler Tutar (TL)
+**** **** **** 2422 Önceki Dönem Hesap Özeti Bakiyesi 13,000.00
+Kart Ara Toplamı (TL) 12,345.67
+Asgari Ödeme Tutarı 3,086.42
+GENEL TOPLAM (TL) 12,345.67

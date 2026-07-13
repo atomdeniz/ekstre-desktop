@@ -18,6 +18,24 @@ document.getElementById("toggle").addEventListener("click", () => {
   localStorage.setItem("blur", blurred ? "on" : "off");
 });
 
+const sunSvg = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></svg>`;
+const moonSvg = `<svg viewBox="0 0 24 24"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a7 7 0 1 0 11 11Z"/></svg>`;
+const themeEl = document.getElementById("theme");
+
+function renderThemeIcon() {
+  themeEl.innerHTML =
+    document.documentElement.getAttribute("data-theme") === "dark" ? sunSvg : moonSvg;
+}
+renderThemeIcon();
+
+themeEl.addEventListener("click", () => {
+  const dark = document.documentElement.getAttribute("data-theme") === "dark";
+  const next = dark ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem("theme", next);
+  renderThemeIcon();
+});
+
 document.getElementById("settings").addEventListener("click", () => {
   window.location.href = "settings.html";
 });
@@ -51,35 +69,57 @@ function setView(view) {
 tabCardsEl.addEventListener("click", () => setView("cards"));
 tabCalEl.addEventListener("click", () => setView("calendar"));
 
-function badge(daysLeft) {
-  if (daysLeft === null || daysLeft === undefined) return "";
-  if (daysLeft < 0) return `<span class="badge b-gray">Geçti</span>`;
-  if (daysLeft === 0) return `<span class="badge b-red">Bugün</span>`;
-  const cls = daysLeft <= 3 ? "b-orange" : "b-green";
-  return `<span class="badge ${cls}">${daysLeft} gün</span>`;
+const MONTHS_SHORT = ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
+const HEAT_HORIZON = 30;
+
+function fmtDate(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || "");
+  return m ? `${Number(m[3])} ${MONTHS_SHORT[Number(m[2]) - 1]}` : (iso || "");
 }
 
-function cardHtml(c) {
-  const min = c.min_due_fmt
-    ? `<div><div class="amt-label">Asgari</div><div class="amt-value">${c.min_due_fmt} TL</div></div>`
-    : "";
-  const stmt = c.statement_date
-    ? `<div class="meta"><span>Hesap kesim: ${c.statement_date}</span></div>`
-    : "";
+function urgency(d) {
+  if (d === null || d === undefined) return "";
+  if (d < 0) return "past";
+  if (d === 0) return "now";
+  if (d <= 3) return "warn";
+  return "ok";
+}
+
+function heatPct(d) {
+  if (d === null || d === undefined) return 0;
+  if (d < 0) return 100;
+  return Math.round(Math.min(1, (HEAT_HORIZON - d) / HEAT_HORIZON) * 100);
+}
+
+function daysLabel(d) {
+  if (d === null || d === undefined) return "";
+  if (d < 0) return "Geçti";
+  if (d === 0) return "Bugün";
+  return `${d} gün`;
+}
+
+const dlSvg = `<svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></svg>`;
+
+function cardHtml(c, i) {
+  const min = c.min_due_fmt ? `<span class="min">Asgari <b>${c.min_due_fmt}</b> ₺</span>` : "";
+  const kesim = c.statement_date ? `Kesim ${fmtDate(c.statement_date)} · ` : "";
   return `
-    <div class="card" style="--accent:${c.color}">
-      <div class="top">
+    <article class="card ${urgency(c.days_left)}" style="--accent:${c.color};--i:${i}">
+      <div class="card-head">
         <span class="bank" style="color:${c.color}">${c.bank}</span>
-        <button class="dl" data-id="${c.id}" title="Ekstre PDF'ini indir">⭳ PDF</button>
+        <span class="masked">${c.card_masked ?? "-"}</span>
+        <button class="dl" data-id="${c.id}" title="Ekstre PDF'ini indir" aria-label="Ekstre PDF'ini indir">${dlSvg}</button>
       </div>
-      <div class="masked">${c.card_masked ?? "-"}</div>
-      <div class="amounts">
-        <div><div class="amt-label">Dönem borcu</div><div class="amt-value">${c.total_due_fmt} TL</div></div>
+      <div class="hero">
+        <span class="amt-value">${c.total_due_fmt}<span class="cur"> ₺</span></span>
         ${min}
       </div>
-      ${stmt}
-      <div class="meta"><span>Son ödeme: ${c.due_date}</span>${badge(c.days_left)}</div>
-    </div>`;
+      <div class="track" aria-hidden="true"><span class="track-fill" style="width:${heatPct(c.days_left)}%"></span></div>
+      <div class="card-foot">
+        <span class="due">${kesim}Son ödeme ${fmtDate(c.due_date)}</span>
+        <span class="days">${daysLabel(c.days_left)}</span>
+      </div>
+    </article>`;
 }
 
 cardsEl.addEventListener("click", async (e) => {
@@ -128,19 +168,19 @@ function dayDetail(iso) {
       <div class="cal-item" style="--accent:${c.color}">
         <div><span class="bank" style="color:${c.color}">${c.bank}</span>
           <span class="masked">${c.card_masked ?? ""}</span></div>
-        <div class="amt-value">${c.total_due_fmt} TL</div>
+        <div class="amt-value">${c.total_due_fmt}<span class="cur"> ₺</span></div>
       </div>`)
     .join("");
-  return `<div class="cal-day-title">${iso} — son ödeme</div>${rows}`;
+  return `<div class="cal-day-title">${fmtDate(iso)} — son ödeme</div>${rows}`;
+}
+
+function tag(c) {
+  return `<span class="cal-tag" style="background:${c.color}">${c.bank}</span>`;
 }
 
 function cellTags(items) {
-  const shown = items
-    .slice(0, 2)
-    .map((c) => `<span class="cal-tag" style="background:${c.color}">${c.bank}</span>`)
-    .join("");
-  const more = items.length > 2 ? `<span class="cal-tag more">+${items.length - 2}</span>` : "";
-  return shown + more;
+  if (items.length <= 2) return items.map(tag).join("");
+  return tag(items[0]) + `<span class="cal-tag more">+${items.length - 1}</span>`;
 }
 
 function renderCalendar() {
@@ -170,10 +210,8 @@ function renderCalendar() {
       <button class="cal-nav" data-nav="1" title="Sonraki ay">›</button>
     </div>
     <div class="cal-detail">${selectedIso ? dayDetail(selectedIso) : ""}</div>
-    <div class="cal-grid">
-      ${TR_DOW.map((w) => `<div class="cal-dow">${w}</div>`).join("")}
-      ${cells}
-    </div>`;
+    <div class="cal-dow-row">${TR_DOW.map((w) => `<div class="cal-dow">${w}</div>`).join("")}</div>
+    <div class="cal-grid">${cells}</div>`;
 }
 
 calEl.addEventListener("click", (e) => {

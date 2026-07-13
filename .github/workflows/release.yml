@@ -21,6 +21,9 @@ jobs:
             args: "--target x86_64-pc-windows-msvc"
             rust_targets: "x86_64-pc-windows-msvc"
     runs-on: ${{ matrix.platform }}
+    # notarytool --wait can hang for hours on Apple-side stalls; fail fast
+    # instead of burning the full 6h job limit (macOS runners bill 10x).
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 

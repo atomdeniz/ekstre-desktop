@@ -3,7 +3,7 @@
 
 [package]
 name = "ekstre-desktop"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 description = "Ekstre — Turkish credit-card statement tracker for the desktop"
 license = "MIT"

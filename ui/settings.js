@@ -13,6 +13,7 @@ const userEl = document.getElementById("user");
 const passwordEl = document.getElementById("password");
 const mailboxEl = document.getElementById("mailbox");
 const reminderDaysEl = document.getElementById("reminder-days");
+const launchAtLoginEl = document.getElementById("launch-at-login");
 const serverFieldsEl = document.getElementById("server-fields");
 const hintEl = document.getElementById("pw-hint");
 const testResult = document.getElementById("test-result");
@@ -42,6 +43,7 @@ async function init() {
   mailboxEl.value = settings.imap_mailbox || "INBOX";
   reminderDaysEl.value =
     settings.reminder_days_before != null ? settings.reminder_days_before : 3;
+  launchAtLoginEl.checked = settings.launch_at_login !== "false";
   const host = settings.imap_host || "imap.gmail.com";
   const port = Number(settings.imap_port) || 993;
   const providerId = providerForHost(host);
@@ -109,6 +111,7 @@ document.getElementById("save").addEventListener("click", async () => {
       form: f,
       selectedBanks: selected,
       reminderDaysBefore,
+      launchAtLogin: launchAtLoginEl.checked,
     });
     window.location.href = "index.html";
   } catch (e) {

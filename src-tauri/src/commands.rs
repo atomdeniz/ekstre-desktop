@@ -149,11 +149,13 @@ pub fn complete_setup(
 /// keychain entry untouched; only a typed password overwrites it.
 #[tauri::command]
 pub fn update_settings(
-    state: State<AppState>,
+    app: AppHandle,
     form: ImapForm,
     selected_banks: Vec<String>,
     reminder_days_before: i64,
+    launch_at_login: bool,
 ) -> Result<(), String> {
+    let state = app.state::<AppState>();
     if !form.password.is_empty() {
         state.set_imap_password(&form.user, &form.password)?;
     }
@@ -164,11 +166,24 @@ pub fn update_settings(
         ("imap_mailbox", form.mailbox.clone()),
         ("selected_banks", selected_banks.join(",")),
         ("reminder_days_before", reminder_days_before.max(0).to_string()),
+        ("launch_at_login", launch_at_login.to_string()),
     ];
     for (k, v) in settings {
         state.db.set_setting(k, &v).map_err(|e| e.to_string())?;
     }
+    set_autolaunch(&app, launch_at_login);
     Ok(())
+}
+
+/// Apply the login-item setting to the OS. No-op in dev builds, which never
+/// register a login item (matches the startup sync in `run()`).
+fn set_autolaunch(_app: &AppHandle, _enabled: bool) {
+    #[cfg(not(debug_assertions))]
+    {
+        use tauri_plugin_autostart::ManagerExt;
+        let launcher = _app.autolaunch();
+        let _ = if _enabled { launcher.enable() } else { launcher.disable() };
+    }
 }
 
 #[tauri::command]

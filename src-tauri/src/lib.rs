@@ -70,12 +70,17 @@ pub fn run() {
                 })
                 .build(app)?;
 
-            // Launch at login in release builds (skipped in dev to avoid adding
-            // the dev binary to login items).
+            // Sync the login item to the saved setting (default on) in release
+            // builds. Skipped in dev to avoid adding the dev binary to login items.
             #[cfg(not(debug_assertions))]
             {
                 use tauri_plugin_autostart::ManagerExt;
-                let _ = app.autolaunch().enable();
+                let launcher = app.autolaunch();
+                let _ = if state::Config::load(&app.state::<AppState>().db).launch_at_login {
+                    launcher.enable()
+                } else {
+                    launcher.disable()
+                };
             }
 
             scheduler::start(app.handle().clone());

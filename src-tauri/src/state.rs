@@ -23,6 +23,8 @@ pub struct Config {
     pub reminder_days_before: i64,
     /// Selected bank names; empty means "all built-in banks".
     pub selected_banks: Vec<String>,
+    /// Start the app automatically on login. Defaults on.
+    pub launch_at_login: bool,
 }
 
 impl Config {
@@ -48,6 +50,7 @@ impl Config {
             reminder_hour: Self::get(db, "reminder_hour", "9").parse().unwrap_or(9),
             reminder_days_before: Self::get(db, "reminder_days_before", "3").parse().unwrap_or(3),
             selected_banks,
+            launch_at_login: Self::get(db, "launch_at_login", "true") != "false",
         }
     }
 

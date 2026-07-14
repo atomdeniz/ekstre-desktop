@@ -39,7 +39,8 @@ pub fn imap_since(today: (i32, u32, u32), days: i64) -> String {
 
 /// Connect, scan every bank over the lookback window, and return parsed statements.
 /// `pdfium` is required for banks whose `source` is `pdf`. `today` seeds the SINCE
-/// date. Never marks mail read (uses `BODY.PEEK[]`).
+/// date; `lookback_days <= 0` drops the date filter and scans the whole mailbox.
+/// Never marks mail read (uses `BODY.PEEK[]`).
 pub fn scan(
     cfg: &ImapConfig,
     banks: &[Bank],
@@ -52,11 +53,14 @@ pub fn scan(
     let mut session = client.login(&cfg.user, &cfg.password).map_err(|(e, _)| e)?;
     session.select(&cfg.mailbox)?;
 
-    let since = imap_since(today, lookback_days);
     let mut out = Vec::new();
 
     for bank in banks {
-        let mut query = format!("SINCE {since}");
+        let mut query = if lookback_days > 0 {
+            format!("SINCE {}", imap_since(today, lookback_days))
+        } else {
+            "ALL".to_string()
+        };
         // Only send the FROM filter server-side when ASCII (non-ASCII IMAP SEARCH
         // is unreliable); we always re-filter headers in Rust below.
         if let Some(f) = &bank.match_from {

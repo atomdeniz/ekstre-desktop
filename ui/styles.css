@@ -165,7 +165,9 @@ h1 .mark .stripe { stroke: var(--accent); stroke-width: 2.4; }
   letter-spacing: 0.02em;
 }
 
-.dl {
+.dl,
+.pay,
+.hide {
   flex: 0 0 auto;
   width: 30px;
   height: 30px;
@@ -180,14 +182,23 @@ h1 .mark .stripe { stroke: var(--accent); stroke-width: 2.4; }
   cursor: pointer;
   transition: color 0.12s, background 0.12s, border-color 0.12s;
 }
-.dl:hover { color: var(--accent); background: var(--sunk); border-color: var(--border); }
-.dl:active { transform: translateY(1px); }
-.dl:disabled { opacity: 0.4; cursor: default; }
-.dl svg {
+.dl:hover, .pay:hover { color: var(--accent); background: var(--sunk); border-color: var(--border); }
+.hide:hover { color: var(--now); background: var(--sunk); border-color: var(--border); }
+.dl:active, .pay:active, .hide:active { transform: translateY(1px); }
+.dl:disabled, .pay:disabled, .hide:disabled { opacity: 0.4; cursor: default; }
+.dl svg,
+.pay svg,
+.hide svg {
   width: 16px; height: 16px;
   fill: none; stroke: currentColor;
   stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
 }
+.pay.on {
+  color: #fff;
+  background: var(--ok);
+  border-color: var(--ok);
+}
+.pay.on:hover { color: #fff; background: var(--ok); border-color: var(--ok); filter: brightness(1.06); }
 
 .hero {
   display: flex;
@@ -234,6 +245,7 @@ body.blur .min b { filter: blur(7px); }
 .card.warn .track-fill { background: var(--warn); }
 .card.now .track-fill { background: var(--now); }
 .card.past .track-fill { background: var(--past); }
+.card.paid .track-fill { background: var(--ok); }
 
 .card-foot {
   display: flex;
@@ -254,6 +266,8 @@ body.blur .min b { filter: blur(7px); }
 .card.warn .days { color: var(--warn); }
 .card.now .days { color: var(--now); }
 .card.past .days { color: var(--past); font-weight: 600; }
+.card.paid .days { color: var(--ok); }
+.card.paid .hero .amt-value { color: var(--muted); }
 
 /* ── empty / status ── */
 .empty {
@@ -365,6 +379,7 @@ body.blur .min b { filter: blur(7px); }
 }
 .cal-item .masked { flex: 0 0 auto; margin-left: 8px; }
 .cal-item .amt-value { white-space: nowrap; }
+.cal-paid { color: var(--ok); font-weight: 700; margin-right: 5px; }
 
 /* ── focus + motion ── */
 :focus-visible {

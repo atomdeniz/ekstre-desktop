@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS card_statements (
   due_date TEXT NOT NULL,
   statement_date TEXT,
   reminded_at TEXT,
+  paid_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_card_stmt
@@ -38,6 +39,7 @@ pub struct StatementRow {
     pub due_date: String,
     pub statement_date: Option<String>,
     pub reminded_at: Option<String>,
+    pub paid_at: Option<String>,
 }
 
 /// A single-connection SQLite store, serialized behind a mutex.
@@ -54,6 +56,7 @@ impl Database {
         }
         let conn = Connection::open(path)?;
         conn.execute_batch(SCHEMA)?;
+        migrate(&conn);
         Ok(Self {
             conn: Mutex::new(conn),
         })
@@ -62,6 +65,7 @@ impl Database {
     pub fn open_in_memory() -> rusqlite::Result<Self> {
         let conn = Connection::open_in_memory()?;
         conn.execute_batch(SCHEMA)?;
+        migrate(&conn);
         Ok(Self {
             conn: Mutex::new(conn),
         })
@@ -114,7 +118,7 @@ impl Database {
     pub fn get_statement(&self, id: i64) -> rusqlite::Result<Option<StatementRow>> {
         let conn = self.conn.lock().unwrap();
         conn.query_row(
-            "SELECT id, bank, card_last4, card_masked, total_due, min_due, due_date, statement_date, reminded_at
+            "SELECT id, bank, card_last4, card_masked, total_due, min_due, due_date, statement_date, reminded_at, paid_at
              FROM card_statements WHERE id = ?1",
             params![id],
             row_to_statement,
@@ -127,15 +131,16 @@ impl Database {
     }
 
     /// Statements whose due date is within `days_before` days from today (past-due
-    /// included) and not yet reminded, oldest first. `days_before` = 0 means "due
-    /// today or earlier"; larger values fire the reminder that many days ahead.
+    /// included), not yet reminded, and not marked paid, oldest first. `days_before`
+    /// = 0 means "due today or earlier"; larger values fire that many days ahead.
     pub fn due_unreminded(&self, days_before: i64) -> rusqlite::Result<Vec<StatementRow>> {
         let conn = self.conn.lock().unwrap();
         let modifier = format!("+{} days", days_before.max(0));
         let mut stmt = conn.prepare(
-            "SELECT id, bank, card_last4, card_masked, total_due, min_due, due_date, statement_date, reminded_at
+            "SELECT id, bank, card_last4, card_masked, total_due, min_due, due_date, statement_date, reminded_at, paid_at
              FROM card_statements
              WHERE due_date <= date('now','localtime',?1) AND reminded_at IS NULL
+               AND paid_at IS NULL
              ORDER BY due_date",
         )?;
         let rows = stmt
@@ -153,12 +158,22 @@ impl Database {
         Ok(())
     }
 
+    /// Mark a statement paid (`Some(timestamp)`) or clear the mark (`None`).
+    pub fn set_paid(&self, id: i64, when_iso: Option<&str>) -> rusqlite::Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE card_statements SET paid_at = ?1 WHERE id = ?2",
+            params![when_iso, id],
+        )?;
+        Ok(())
+    }
+
     /// The newest statement per (bank, card_last4) group, ordered by due_date asc.
     /// This is the dashboard's data source.
     pub fn latest_per_card(&self) -> rusqlite::Result<Vec<StatementRow>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, bank, card_last4, card_masked, total_due, min_due, due_date, statement_date, reminded_at
+            "SELECT id, bank, card_last4, card_masked, total_due, min_due, due_date, statement_date, reminded_at, paid_at
              FROM (
                SELECT *, ROW_NUMBER() OVER (
                  PARTITION BY bank, ifnull(card_last4, '')
@@ -175,12 +190,32 @@ impl Database {
         Ok(rows)
     }
 
+    /// Every distinct card ever seen, as (bank, card_last4, card_masked,
+    /// last_statement_date), for the settings screen's per-card toggles. The
+    /// last date is the newest statement's own date (kesim, falling back to
+    /// due date), not the capture time — a deep scan must not reset it.
+    pub fn known_cards(
+        &self,
+    ) -> rusqlite::Result<Vec<(String, Option<String>, Option<String>, Option<String>)>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT bank, card_last4, MAX(card_masked), MAX(ifnull(statement_date, due_date))
+             FROM card_statements
+             GROUP BY bank, ifnull(card_last4, '')
+             ORDER BY bank, ifnull(card_last4, '')",
+        )?;
+        let rows = stmt
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
+    }
+
     /// Every stored statement, oldest due date first. Backs the calendar view,
     /// which spans months and so needs history, not just the latest per card.
     pub fn all_statements(&self) -> rusqlite::Result<Vec<StatementRow>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, bank, card_last4, card_masked, total_due, min_due, due_date, statement_date, reminded_at
+            "SELECT id, bank, card_last4, card_masked, total_due, min_due, due_date, statement_date, reminded_at, paid_at
              FROM card_statements
              ORDER BY due_date",
         )?;
@@ -258,5 +293,12 @@ fn row_to_statement(row: &rusqlite::Row) -> rusqlite::Result<StatementRow> {
         due_date: row.get(6)?,
         statement_date: row.get(7)?,
         reminded_at: row.get(8)?,
+        paid_at: row.get(9)?,
     })
+}
+
+/// Columns added after the first release; ALTER fails harmlessly once the
+/// column exists, so this is safe to run on every open.
+fn migrate(conn: &Connection) {
+    let _ = conn.execute("ALTER TABLE card_statements ADD COLUMN paid_at TEXT", []);
 }

@@ -188,6 +188,35 @@ fn test_past_due_captured_silently() {
 }
 
 #[test]
+fn test_paid_suppresses_reminder() {
+    // Marking paid removes the row from due_unreminded; unmarking restores it.
+    let db = Database::open_in_memory().unwrap();
+    let today = today_iso();
+    let s = Statement {
+        bank: "TEB".into(),
+        card_last4: Some("1111".into()),
+        card_masked: Some("m".into()),
+        total_due: 10.0,
+        min_due: Some(1.0),
+        due_date: shift_days(&today, 2),
+        statement_date: None,
+    };
+    db.insert_statement(&s).unwrap();
+    let id = db.statement_id(&s).unwrap().unwrap();
+    assert_eq!(db.due_unreminded(3).unwrap().len(), 1);
+
+    db.set_paid(id, Some("2026-01-01 00:00:00")).unwrap();
+    assert!(db.due_unreminded(3).unwrap().is_empty());
+    assert_eq!(
+        db.latest_per_card().unwrap()[0].paid_at.as_deref(),
+        Some("2026-01-01 00:00:00")
+    );
+
+    db.set_paid(id, None).unwrap();
+    assert_eq!(db.due_unreminded(3).unwrap().len(), 1);
+}
+
+#[test]
 fn test_db_dedup() {
     let db = Database::open_in_memory().unwrap();
     let b = banks();

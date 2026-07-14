@@ -5,41 +5,57 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ekstre — Ayarlar</title>
     <script src="theme.js"></script>
-    <link rel="stylesheet" href="styles.css?v=2" />
-    <link rel="stylesheet" href="wizard.css?v=2" />
+    <link rel="stylesheet" href="styles.css?v=3" />
+    <link rel="stylesheet" href="wizard.css?v=3" />
   </head>
   <body>
     <div class="wizard">
-      <h1>Ayarlar</h1>
-      <label>E-posta sağlayıcı
-        <select id="provider"></select>
-      </label>
-      <p class="hint" id="pw-hint"></p>
-      <label>E-posta adresi
-        <input id="user" type="email" placeholder="ornek@gmail.com" />
-      </label>
-      <label>Uygulama şifresi
-        <input id="password" type="password"
-               placeholder="Değiştirmek için yeni şifre gir" />
-      </label>
-      <div id="server-fields" hidden>
-        <label>Sunucu <input id="host" type="text" /></label>
-        <label>Port <input id="port" type="number" value="993" /></label>
+      <div class="settings-head">
+        <button class="ic" id="back" title="Geri" aria-label="Geri">
+          <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <h1>Ayarlar</h1>
       </div>
-      <details>
-        <summary>Gelişmiş (IMAP klasörü)</summary>
-        <label>Klasör <input id="mailbox" type="text" value="INBOX" /></label>
+
+      <h1 class="section">E-posta hesapları</h1>
+      <p class="hint">Ekstreler bu hesapların gelen kutularından taranır.</p>
+      <div id="account-list" class="account-list"></div>
+
+      <details id="add-account">
+        <summary>+ Hesap ekle</summary>
+        <label>E-posta sağlayıcı
+          <select id="provider"></select>
+        </label>
+        <p class="hint" id="pw-hint"></p>
+        <label>E-posta adresi
+          <input id="user" type="email" placeholder="ornek@gmail.com" />
+        </label>
+        <label>Uygulama şifresi
+          <input id="password" type="password" placeholder="Uygulama şifresi" />
+        </label>
+        <div id="server-fields" hidden>
+          <label>Sunucu <input id="host" type="text" /></label>
+          <label>Port <input id="port" type="number" value="993" /></label>
+        </div>
+        <details>
+          <summary>Gelişmiş (IMAP klasörü)</summary>
+          <label>Klasör <input id="mailbox" type="text" value="INBOX" /></label>
+        </details>
+        <div class="test">
+          <button class="btn" id="test-btn">Bağlantıyı test et</button>
+          <span id="test-result" class="result"></span>
+        </div>
+        <div class="nav">
+          <button class="btn primary" id="add-btn">Hesabı ekle</button>
+        </div>
       </details>
-      <div class="test">
-        <button class="btn" id="test-btn">Bağlantıyı test et</button>
-        <span id="test-result" class="result"></span>
-      </div>
 
       <h1 class="section">Hatırlatma</h1>
       <label>Son ödemeden kaç gün önce hatırlatılsın
         <input id="reminder-days" type="number" min="0" max="30" value="3" />
       </label>
-      <p class="hint">0 = son ödeme günü. Hatırlatma her ekstre için bir kez gönderilir.</p>
+      <p class="hint">0 = son ödeme günü. Hatırlatma her ekstre için bir kez gönderilir;
+        ödendi işaretlenen ekstreler hatırlatılmaz.</p>
 
       <h1 class="section">Genel</h1>
       <label class="bank-row">
@@ -48,9 +64,25 @@
       </label>
 
       <h1 class="section">Bankalar</h1>
-      <p class="hint">Yalnızca seçtiğin bankaların ekstreleri taranır.</p>
+      <p class="hint">Yalnızca seçtiğin bankaların ekstreleri taranır. Taramada
+        bulunan kartlar bankanın altında listelenir; kapattığın kart panoda ve
+        hatırlatmalarda görünmez.</p>
       <div id="bank-list" class="bank-list"></div>
 
+      <h1 class="section">Geçmiş</h1>
+      <p class="hint">Normalde yalnızca son 45 gün taranır. Eski ekstreleri de
+        takvimde görmek için geçmişi bir kez tarayabilirsin — hesap ve e-posta
+        sayısına göre birkaç dakika sürebilir. Eski ekstreler için bildirim
+        gönderilmez.</p>
+      <label>Kaç gün geriye taransın (0 = sınırsız)
+        <input id="deep-days" type="number" min="0" max="3650" value="365" />
+      </label>
+      <div class="test">
+        <button class="btn" id="deep-scan">Geçmişi tara</button>
+        <span id="deep-result" class="result"></span>
+      </div>
+
+      <p id="save-result" class="result"></p>
       <div class="nav">
         <button class="btn" id="cancel">İptal</button>
         <button class="btn primary" id="save">Kaydet</button>

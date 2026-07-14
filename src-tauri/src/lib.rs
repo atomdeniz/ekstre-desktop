@@ -108,6 +108,13 @@ pub fn run() {
             commands::get_settings,
             commands::save_settings,
             commands::download_statement,
+            commands::list_accounts,
+            commands::add_account,
+            commands::remove_account,
+            commands::set_paid,
+            commands::deep_scan,
+            commands::list_cards,
+            commands::set_card_enabled,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Ekstre");

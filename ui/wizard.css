@@ -1,4 +1,6 @@
 .wizard { max-width: 460px; margin: 0 auto; padding-top: 6px; }
+.settings-head { display: flex; align-items: center; gap: 10px; }
+.settings-head h1 { flex: 1; margin: 0; }
 .step h1 { font-size: 21px; margin: 8px 0 12px; letter-spacing: -0.02em; }
 h1.section { margin-top: 30px; font-size: 16px; }
 .step p, .wizard > p { color: var(--muted); line-height: 1.5; margin: 0 0 12px; }
@@ -36,6 +38,20 @@ input:focus, select:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+/* WebKit renders selects with the native chrome unless appearance is reset,
+   which clashes with the custom padding/border — draw our own chevron. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2374767d' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 15px;
+}
+:root[data-theme="dark"] select {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23979ba3' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 details { margin-top: 14px; }
 summary { cursor: pointer; color: var(--muted); font-size: 13px; }
@@ -95,3 +111,61 @@ summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 .bank-row:hover { border-color: var(--muted); }
 .bank-row input { width: auto; margin: 0; accent-color: var(--accent); }
 .bank-row span { font-weight: 700; }
+
+.bank-group { display: flex; flex-direction: column; gap: 6px; }
+.card-subs { display: flex; flex-direction: column; gap: 5px; margin: 0 0 2px 22px; }
+.card-sub {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+.card-sub:hover { border-color: var(--muted); }
+.card-sub input { width: auto; margin: 0; accent-color: var(--accent); }
+.card-sub .masked {
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+  font-family: var(--font-num);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+.card-ago { flex: 0 0 auto; color: var(--muted); font-size: 11px; }
+.card-sub:has(input:not(:checked)) .masked { color: var(--muted); text-decoration: line-through; }
+
+.account-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+.account-info { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.account-info b {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-row .btn { flex: 0 0 auto; padding: 7px 11px; font-size: 13px; }
+.btn.danger:hover { border-color: var(--now); color: var(--now); }
+
+.account-row.confirming { border-color: var(--now); }
+.confirm-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+.btn.danger-solid {
+  background: var(--now);
+  border-color: var(--now);
+  color: #fff;
+}
+.btn.danger-solid:hover { filter: brightness(1.06); border-color: var(--now); }

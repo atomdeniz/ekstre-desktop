@@ -99,30 +99,68 @@ function daysLabel(d) {
 }
 
 const dlSvg = `<svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></svg>`;
+const checkSvg = `<svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg>`;
+const hideSvg = `<svg viewBox="0 0 24 24"><path d="m3 3 18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c7 0 10.5 7 10.5 7a17.6 17.6 0 0 1-3.2 4.1M6.5 6.6C3.4 8.7 1.5 12 1.5 12s3.5 7 10.5 7a9.7 9.7 0 0 0 4.4-1"/><path d="M9.7 9.8a3.2 3.2 0 0 0 4.5 4.5"/></svg>`;
 
 function cardHtml(c, i) {
   const min = c.min_due_fmt ? `<span class="min">Asgari <b>${c.min_due_fmt}</b> ₺</span>` : "";
   const kesim = c.statement_date ? `Kesim ${fmtDate(c.statement_date)} · ` : "";
+  const payTitle = c.paid ? "Ödenmedi olarak işaretle" : "Ödendi olarak işaretle";
   return `
-    <article class="card ${urgency(c.days_left)}" style="--accent:${c.color};--i:${i}">
+    <article class="card ${c.paid ? "paid" : urgency(c.days_left)}" style="--accent:${c.color};--i:${i}">
       <div class="card-head">
         <span class="bank" style="color:${c.color}">${c.bank}</span>
         <span class="masked">${c.card_masked ?? "-"}</span>
+        <button class="hide" data-bank="${c.bank}" data-last4="${c.card_last4 ?? ""}"
+                title="Kartı gizle" aria-label="Kartı gizle">${hideSvg}</button>
+        <button class="pay${c.paid ? " on" : ""}" data-id="${c.id}" data-paid="${c.paid}"
+                title="${payTitle}" aria-label="${payTitle}">${checkSvg}</button>
         <button class="dl" data-id="${c.id}" title="Ekstre PDF'ini indir" aria-label="Ekstre PDF'ini indir">${dlSvg}</button>
       </div>
       <div class="hero">
         <span class="amt-value">${c.total_due_fmt}<span class="cur"> ₺</span></span>
         ${min}
       </div>
-      <div class="track" aria-hidden="true"><span class="track-fill" style="width:${heatPct(c.days_left)}%"></span></div>
+      <div class="track" aria-hidden="true"><span class="track-fill" style="width:${c.paid ? 100 : heatPct(c.days_left)}%"></span></div>
       <div class="card-foot">
         <span class="due">${kesim}Son ödeme ${fmtDate(c.due_date)}</span>
-        <span class="days">${daysLabel(c.days_left)}</span>
+        <span class="days">${c.paid ? "Ödendi ✓" : daysLabel(c.days_left)}</span>
       </div>
     </article>`;
 }
 
 cardsEl.addEventListener("click", async (e) => {
+  const hideBtn = e.target.closest(".hide");
+  if (hideBtn) {
+    hideBtn.disabled = true;
+    try {
+      await invoke("set_card_enabled", {
+        bank: hideBtn.dataset.bank,
+        cardLast4: hideBtn.dataset.last4 || null,
+        enabled: false,
+      });
+      statusEl.textContent = "Kart gizlendi — Ayarlar'dan geri açabilirsin.";
+      await load();
+    } catch (err) {
+      statusEl.textContent = `Hata: ${err}`;
+      hideBtn.disabled = false;
+    }
+    return;
+  }
+  const payBtn = e.target.closest(".pay");
+  if (payBtn) {
+    payBtn.disabled = true;
+    try {
+      const paid = payBtn.dataset.paid !== "true";
+      await invoke("set_paid", { id: Number(payBtn.dataset.id), paid });
+      statusEl.textContent = paid ? "Ödendi olarak işaretlendi ✓" : "Ödendi işareti kaldırıldı.";
+      await load();
+    } catch (err) {
+      statusEl.textContent = `Hata: ${err}`;
+      payBtn.disabled = false;
+    }
+    return;
+  }
   const btn = e.target.closest(".dl");
   if (!btn) return;
   btn.disabled = true;
@@ -168,7 +206,7 @@ function dayDetail(iso) {
       <div class="cal-item" style="--accent:${c.color}">
         <div><span class="bank" style="color:${c.color}">${c.bank}</span>
           <span class="masked">${c.card_masked ?? ""}</span></div>
-        <div class="amt-value">${c.total_due_fmt}<span class="cur"> ₺</span></div>
+        <div class="amt-value">${c.paid ? '<span class="cal-paid">✓</span>' : ""}${c.total_due_fmt}<span class="cur"> ₺</span></div>
       </div>`)
     .join("");
   return `<div class="cal-day-title">${fmtDate(iso)} — son ödeme</div>${rows}`;

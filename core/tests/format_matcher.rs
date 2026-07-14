@@ -17,6 +17,7 @@ fn row(min_due: Option<f64>, statement_date: Option<&str>) -> StatementRow {
         due_date: "2026-07-25".into(),
         statement_date: statement_date.map(|s| s.into()),
         reminded_at: None,
+        paid_at: None,
     }
 }
 

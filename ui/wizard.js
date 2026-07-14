@@ -84,12 +84,14 @@ document.getElementById("finish").addEventListener("click", async () => {
   const selected = [...document.querySelectorAll("#bank-list input:checked")].map(
     (i) => i.value
   );
+  const finishResult = document.getElementById("finish-result");
   try {
     await invoke("complete_setup", { form: form(), selectedBanks: selected });
     await invoke("poll_now").catch(() => {});
     window.location.href = "index.html";
   } catch (e) {
-    alert(`Kaydedilemedi: ${e}`);
+    finishResult.className = "result err";
+    finishResult.textContent = `Kaydedilemedi: ${e}`;
   }
 });
 

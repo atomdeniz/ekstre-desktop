@@ -51,6 +51,11 @@ fn run_reminders(app: &AppHandle, state: &AppState, cfg: &Config) {
     };
     let today = state.db.today_local().unwrap_or_default();
     for row in rows {
+        // Disabled cards are skipped without marking, so re-enabling a card
+        // before its due date restores the reminder.
+        if !cfg.is_card_enabled(&row.bank, row.card_last4.as_deref()) {
+            continue;
+        }
         let left = days_left(&row.due_date, &today).unwrap_or(0);
         let sent = app
             .notification()

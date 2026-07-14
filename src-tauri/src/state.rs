@@ -7,15 +7,23 @@ use std::path::PathBuf;
 use ekstre_core::banks::Bank;
 use ekstre_core::imap::{scan, ImapConfig, Scanned};
 use ekstre_core::{builtin_banks, Database};
+use serde::{Deserialize, Serialize};
 
 const KEYRING_SERVICE: &str = "com.denizozogul.ekstre";
 
+/// One IMAP account (non-secret part; the password lives in the OS keychain,
+/// keyed by `user`). Stored as a JSON array under the `accounts` settings key.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ImapAccount {
+    pub host: String,
+    pub port: u16,
+    pub user: String,
+    pub mailbox: String,
+}
+
 /// Non-secret runtime settings, persisted in the DB `settings` table.
 pub struct Config {
-    pub imap_host: String,
-    pub imap_port: u16,
-    pub imap_user: String,
-    pub imap_mailbox: String,
+    pub accounts: Vec<ImapAccount>,
     pub lookback_days: i64,
     pub poll_interval_min: u64,
     pub reminder_hour: u32,
@@ -23,6 +31,9 @@ pub struct Config {
     pub reminder_days_before: i64,
     /// Selected bank names; empty means "all built-in banks".
     pub selected_banks: Vec<String>,
+    /// Card keys (`bank|last4`) hidden from the dashboard and reminders.
+    /// An opt-out list, so newly discovered cards default to enabled.
+    pub disabled_cards: Vec<String>,
     /// Start the app automatically on login. Defaults on.
     pub launch_at_login: bool,
 }
@@ -41,10 +52,9 @@ impl Config {
             .map(|s| s.to_string())
             .collect();
         Config {
-            imap_host: Self::get(db, "imap_host", "imap.gmail.com"),
-            imap_port: Self::get(db, "imap_port", "993").parse().unwrap_or(993),
-            imap_user: Self::get(db, "imap_user", ""),
-            imap_mailbox: Self::get(db, "imap_mailbox", "INBOX"),
+            accounts: Self::load_accounts(db),
+            disabled_cards: serde_json::from_str(&Self::get(db, "disabled_cards", "[]"))
+                .unwrap_or_default(),
             lookback_days: Self::get(db, "lookback_days", "45").parse().unwrap_or(45),
             poll_interval_min: Self::get(db, "poll_interval_min", "15").parse().unwrap_or(15),
             reminder_hour: Self::get(db, "reminder_hour", "9").parse().unwrap_or(9),
@@ -54,8 +64,37 @@ impl Config {
         }
     }
 
+    /// Accounts from the `accounts` JSON key. The single-account `imap_*` keys
+    /// written by pre-multi-account versions are only consulted while the
+    /// `accounts` key has never been written — once it exists it is the truth,
+    /// even as an empty list (all accounts removed).
+    fn load_accounts(db: &Database) -> Vec<ImapAccount> {
+        if let Some(raw) = db.get_setting("accounts").ok().flatten() {
+            return serde_json::from_str(&raw).unwrap_or_default();
+        }
+        let user = Self::get(db, "imap_user", "");
+        if user.is_empty() {
+            return Vec::new();
+        }
+        vec![ImapAccount {
+            host: Self::get(db, "imap_host", "imap.gmail.com"),
+            port: Self::get(db, "imap_port", "993").parse().unwrap_or(993),
+            user,
+            mailbox: Self::get(db, "imap_mailbox", "INBOX"),
+        }]
+    }
+
     pub fn is_configured(&self) -> bool {
-        !self.imap_user.is_empty()
+        !self.accounts.is_empty()
+    }
+
+    pub fn card_key(bank: &str, last4: Option<&str>) -> String {
+        format!("{bank}|{}", last4.unwrap_or(""))
+    }
+
+    pub fn is_card_enabled(&self, bank: &str, last4: Option<&str>) -> bool {
+        let key = Self::card_key(bank, last4);
+        !self.disabled_cards.iter().any(|k| k == &key)
     }
 }
 
@@ -111,8 +150,15 @@ impl AppState {
         }
     }
 
-    /// The IMAP password from the OS keychain (falls back to an env var for dev).
+    /// The IMAP password for an account. The dev env var wins over the keychain:
+    /// dev builds are re-signed on every compile, so a keychain read would prompt
+    /// for the login password each time. Applies to every account when set.
     fn imap_password(&self, user: &str) -> Option<String> {
+        if let Ok(pw) = std::env::var("EKSTRE_IMAP_PASSWORD") {
+            if !pw.is_empty() {
+                return Some(pw);
+            }
+        }
         if let Ok(entry) = keyring::Entry::new(KEYRING_SERVICE, user) {
             if let Ok(pw) = entry.get_password() {
                 if !pw.is_empty() {
@@ -120,7 +166,7 @@ impl AppState {
                 }
             }
         }
-        std::env::var("EKSTRE_IMAP_PASSWORD").ok().filter(|s| !s.is_empty())
+        None
     }
 
     /// Store the IMAP password in the OS keychain, keyed by the account user.
@@ -128,6 +174,19 @@ impl AppState {
         keyring::Entry::new(KEYRING_SERVICE, user)
             .and_then(|e| e.set_password(password))
             .map_err(|e| format!("parola kaydedilemedi: {e}"))
+    }
+
+    /// Remove an account's keychain entry. Best-effort: a missing entry is fine.
+    pub fn delete_imap_password(&self, user: &str) {
+        if let Ok(entry) = keyring::Entry::new(KEYRING_SERVICE, user) {
+            let _ = entry.delete_credential();
+        }
+    }
+
+    /// Persist the account list as JSON under the `accounts` settings key.
+    pub fn save_accounts(&self, accounts: &[ImapAccount]) -> Result<(), String> {
+        let json = serde_json::to_string(accounts).map_err(|e| e.to_string())?;
+        self.db.set_setting("accounts", &json).map_err(|e| e.to_string())
     }
 
     /// Connect with the given settings and count parseable statements over the
@@ -144,46 +203,65 @@ impl AppState {
         Ok(found.len())
     }
 
-    /// Run one poll: scan the mailbox, parse, and store. Returns rows added.
+    /// Run one poll: scan every account's mailbox, parse, and store. Returns rows
+    /// added. A failing account is skipped (logged) as long as at least one
+    /// account succeeds; errors only surface when every account fails.
     pub fn run_poll(&self) -> Result<usize, String> {
+        self.run_poll_with_lookback(None)
+    }
+
+    /// Like `run_poll`, but `lookback_days` overrides the configured window.
+    /// Backfilled past-due statements are pre-marked reminded on insert, so a
+    /// deep scan never floods notifications.
+    pub fn run_poll_with_lookback(&self, lookback_days: Option<i64>) -> Result<usize, String> {
         let cfg = Config::load(&self.db);
         if !cfg.is_configured() {
             return Err("E-posta hesabı henüz ayarlanmadı.".into());
         }
-        let password = self
-            .imap_password(&cfg.imap_user)
-            .ok_or("IMAP parolası ayarlı değil.")?;
+        let lookback = lookback_days.unwrap_or(cfg.lookback_days);
         let today = parse_iso(&self.db.today_local().map_err(|e| e.to_string())?)
             .ok_or("bugünün tarihi okunamadı")?;
 
-        let imap_cfg = ImapConfig {
-            host: cfg.imap_host.clone(),
-            port: cfg.imap_port,
-            user: cfg.imap_user.clone(),
-            password,
-            mailbox: cfg.imap_mailbox.clone(),
-        };
         let banks = self.active_banks(&cfg);
         // Bind pdfium locally on this (poll) thread — it is not Send/Sync.
         let pdfium = self
             .pdfium_lib_dir
             .as_ref()
             .and_then(|dir| ekstre_core::pdf::bind_pdfium(dir).ok());
-        let scanned = scan(
-            &imap_cfg,
-            &banks,
-            cfg.lookback_days,
-            today,
-            pdfium.as_ref(),
-        )
-        .map_err(|e| format!("IMAP taraması başarısız: {e}"))?;
 
         let mut added = 0;
-        for item in &scanned {
-            if self.db.insert_statement(&item.statement).map_err(|e| e.to_string())? {
-                added += 1;
+        let mut succeeded = 0;
+        let mut errors: Vec<String> = Vec::new();
+        for acct in &cfg.accounts {
+            let Some(password) = self.imap_password(&acct.user) else {
+                errors.push(format!("{}: IMAP parolası ayarlı değil", acct.user));
+                continue;
+            };
+            let imap_cfg = ImapConfig {
+                host: acct.host.clone(),
+                port: acct.port,
+                user: acct.user.clone(),
+                password,
+                mailbox: acct.mailbox.clone(),
+            };
+            match scan(&imap_cfg, &banks, lookback, today, pdfium.as_ref()) {
+                Ok(scanned) => {
+                    succeeded += 1;
+                    for item in &scanned {
+                        if self.db.insert_statement(&item.statement).map_err(|e| e.to_string())? {
+                            added += 1;
+                        }
+                        self.store_pdf(&item);
+                    }
+                }
+                Err(e) => errors.push(format!("{}: {e}", acct.user)),
             }
-            self.store_pdf(&item);
+        }
+        for e in &errors {
+            log::warn!("account scan failed: {e}");
+        }
+        if succeeded == 0 {
+            return Err(format!("IMAP taraması başarısız: {}", errors.join(" · ")));
         }
         Ok(added)
     }

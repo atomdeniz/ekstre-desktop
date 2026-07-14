@@ -72,3 +72,15 @@ add signing:
 Once signing is added, wire the Windows signing env vars into `tauri-action`
 (e.g. the SignPath action or `certificateThumbprint`); the rest of the pipeline
 stays the same.
+
+## Linux
+
+The matrix also builds on `ubuntu-22.04` (kept at the oldest supported LTS so
+the AppImage runs on older glibc): `libpdfium.so` is downloaded, the Tauri
+system packages are installed, and an `.AppImage`, `.deb`, and `.rpm` are
+produced and uploaded to the same release. No extra secrets needed.
+
+Auto-update on Linux only applies to the **AppImage** (the updater artifact +
+signature are generated for it and included in `latest.json`); `.deb`/`.rpm`
+installs are updated by the user's package manager. Linux packages are not
+signed — this is normal for direct downloads.

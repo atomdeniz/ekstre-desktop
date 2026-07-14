@@ -20,6 +20,10 @@ jobs:
           - platform: windows-latest
             args: "--target x86_64-pc-windows-msvc"
             rust_targets: "x86_64-pc-windows-msvc"
+          # Oldest supported LTS runner so the AppImage/deb glibc floor stays low.
+          - platform: ubuntu-22.04
+            args: ""
+            rust_targets: "x86_64-unknown-linux-gnu"
     runs-on: ${{ matrix.platform }}
     # notarytool --wait can hang for hours on Apple-side stalls; fail fast
     # instead of burning the full 6h job limit (macOS runners bill 10x).
@@ -50,6 +54,22 @@ jobs:
           curl -sL "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/7934/pdfium-win-x64.tgz" -o pdfium.tgz
           mkdir pdfium-extract && tar xzf pdfium.tgz -C pdfium-extract
           cp pdfium-extract/bin/pdfium.dll src-tauri/resources/pdfium/pdfium.dll
+
+      - name: Install system dependencies (Linux)
+        if: startsWith(matrix.platform, 'ubuntu')
+        run: |
+          sudo apt-get update
+          # libdbus-1-dev: keyring's secret-service backend links libdbus.
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev
+
+      - name: Fetch libpdfium.so (Linux)
+        if: startsWith(matrix.platform, 'ubuntu')
+        run: |
+          mkdir -p src-tauri/resources/pdfium
+          curl -sL "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/7934/pdfium-linux-x64.tgz" -o pdfium.tgz
+          mkdir pdfium-extract && tar xzf pdfium.tgz -C pdfium-extract
+          cp pdfium-extract/lib/libpdfium.so src-tauri/resources/pdfium/libpdfium.so
 
       - name: Run core tests
         run: cargo test -p ekstre-core

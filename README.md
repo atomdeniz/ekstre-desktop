@@ -1,9 +1,9 @@
 # Ekstre
 
 **Never miss a credit-card payment again.** Ekstre is a small desktop app for
-macOS and Windows that reads your bank's statement emails, understands them, and
-reminds you before each payment is due — with a native notification, right from
-your menu bar or system tray.
+macOS, Windows, and Linux that reads your bank's statement emails, understands
+them, and reminds you before each payment is due — with a native notification,
+right from your menu bar or system tray.
 
 > **Made for Turkey.** Ekstre understands the statement emails and PDFs sent by
 > Turkish banks (see [Supported banks](#supported-banks)). It parses Turkish
@@ -20,7 +20,7 @@ it quietly does the rest. **Your data never leaves your computer.**
 - **Understands email and PDF statements** — parses the amount due, minimum
   payment, statement date, and due date, whether they're in the email body or a
   PDF attachment.
-- **Reminds you on time** — a native macOS/Windows notification on the due day, so
+- **Reminds you on time** — a native OS notification on the due day, so
   a payment never slips by. Reminders survive sleep/wake, so a laptop that was
   closed at 9 a.m. still gets reminded when it wakes up.
 - **A clean dashboard** — the latest statement per card at a glance: amount, due
@@ -35,8 +35,8 @@ it quietly does the rest. **Your data never leaves your computer.**
 Ekstre stores everything (statements, account settings) **only on your own
 device**. It never sends your data to any server and collects no telemetry. Your
 mailbox is scanned **read-only**, and your email password is kept in the operating
-system's secure store (macOS Keychain / Windows Credential Manager) — never in
-plain text.
+system's secure store (macOS Keychain / Windows Credential Manager / the Linux
+Secret Service, e.g. GNOME Keyring or KWallet) — never in plain text.
 
 ## Supported banks
 
@@ -63,8 +63,13 @@ Grab the latest build from the
 - **Windows** — an installer (`.exe`). Windows builds are not yet code-signed, so
   on first run SmartScreen may warn you — choose **More info → Run anyway**.
   (Signing is planned once the project qualifies.)
+- **Linux** — an `.AppImage` (make it executable and run it), plus `.deb` and
+  `.rpm` packages. The tray icon needs an AppIndicator-capable desktop (standard
+  on KDE; on GNOME install the *AppIndicator* extension).
 
 The app updates itself automatically, so you install once and stay current.
+(On Linux, auto-update works for the AppImage; `.deb`/`.rpm` installs update
+through your package manager.)
 
 ### First run
 
@@ -104,8 +109,17 @@ cargo build -p ekstre-desktop  # compile the whole app
 ```
 
 PDF parsing uses [pdfium](https://github.com/bblanchon/pdfium-binaries). For local
-development, place `libpdfium.dylib` in `vendor/pdfium/lib/` (downloaded once); CI
-and release builds fetch the right binary per platform automatically.
+development, place `libpdfium.dylib` (macOS) / `libpdfium.so` (Linux) /
+`pdfium.dll` (Windows) in `vendor/pdfium/lib/` (downloaded once); CI and release
+builds fetch the right binary per platform automatically.
+
+On Linux you also need the Tauri system packages plus `libdbus-1-dev` (for the
+keychain backend):
+
+```bash
+sudo apt-get install libwebkit2gtk-4.1-dev build-essential curl wget file \
+  libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev
+```
 
 To try a real scan, enter your email app-password in the setup wizard.
 
@@ -133,7 +147,8 @@ bank, verify it against a real statement, and open a pull request.
 ## Releasing
 
 Tagging a version (`git tag v0.1.0 && git push origin v0.1.0`) builds, signs,
-notarizes, and publishes macOS and Windows releases with auto-update artifacts.
+notarizes, and publishes macOS, Windows, and Linux releases with auto-update
+artifacts.
 See [`docs/RELEASING.md`](docs/RELEASING.md) for the required secrets and setup.
 
 ## License

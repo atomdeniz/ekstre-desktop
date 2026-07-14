@@ -2,7 +2,7 @@
 
 ## Overview
 
-Ekstre is a macOS (later Windows) desktop app that tracks Turkish credit-card
+Ekstre is a desktop app (macOS, Windows, Linux) that tracks Turkish credit-card
 statements. It scans the user's email inbox over IMAP **read-only** (never marks
 mail seen), parses bank statements (from the email body or the first PDF
 attachment via pdfium), stores them in a local SQLite file, shows a menu-bar

@@ -48,6 +48,7 @@ Out of the box, verified against real statement PDFs:
 - **Yapı Kredi**
 - **Garanti BBVA**
 - **Akbank** (Axess Business / şirket kredi kartı ekstreleri)
+- **Ziraat**
 
 Bank definitions are simple config entries, so adding a bank is a small pull
 request rather than a code change — see [Adding a bank](#adding-a-bank).

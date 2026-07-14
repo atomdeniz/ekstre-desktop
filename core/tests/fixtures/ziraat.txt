@@ -1,0 +1,11 @@
+Ziraat Bankası Bankkart Ekstresi
+
+1234-####-####-5678 Kart Limiti : 20.000,00 TL
+Müşteri Numarası : 9******12 Kullanılabilir Kart Limiti : 500,00 TL
+Hesap Kesim Tarihi : 03/07/2026 Nakit Avans Limiti : 5.000,00 TL
+Son Ödeme Tarihi : 13/07/2026 Kullanılabilir Nakit Avans Limiti : 500,00 TL
+Dönem Borcu TL : 8.750,25 TL Sonraki Hesap Kesim Tarihi : 03/08/2026
+Dönem Borcu USD : 0,00 USD Sonraki Son Ödeme Tarihi : 13/08/2026
+Asgari Ödeme Tutarı TL : 1.750,05 TL Bugüne Kadar Kazanılan Bankkart Lira : 1,25
+Asgari Ödeme Tutarı USD : 0,00 USD Toplam Bankkart Lira : 1,25
+KART NO : 1234-####-####-5678 / A**** B****

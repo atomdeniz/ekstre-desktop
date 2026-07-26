@@ -8,6 +8,7 @@ const cardsEl = document.getElementById("cards");
 const calEl = document.getElementById("calendar");
 const emptyEl = document.getElementById("empty");
 const statusEl = document.getElementById("status");
+const lastScanEl = document.getElementById("lastscan");
 const tabCardsEl = document.getElementById("tab-cards");
 const tabCalEl = document.getElementById("tab-calendar");
 
@@ -46,6 +47,7 @@ document.getElementById("poll").addEventListener("click", async () => {
     const added = await invoke("poll_now");
     statusEl.textContent = added > 0 ? `${added} yeni ekstre bulundu ✓` : "Yeni ekstre yok.";
     await (currentView === "calendar" ? loadCalendar() : load());
+    loadLastScan();
   } catch (e) {
     statusEl.textContent = `Hata: ${e}`;
   }
@@ -69,12 +71,36 @@ function setView(view) {
 tabCardsEl.addEventListener("click", () => setView("cards"));
 tabCalEl.addEventListener("click", () => setView("calendar"));
 
+loadLastScan();
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) loadLastScan();
+});
+
 const MONTHS_SHORT = ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
 const HEAT_HORIZON = 30;
 
 function fmtDate(iso) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || "");
   return m ? `${Number(m[3])} ${MONTHS_SHORT[Number(m[2]) - 1]}` : (iso || "");
+}
+
+// `last_scan_at` is stored as UTC "YYYY-MM-DD HH:MM:SS"; render in local time.
+function fmtScanTime(utc) {
+  const d = new Date(utc.replace(" ", "T") + "Z");
+  if (isNaN(d)) return utc;
+  const hm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${hm}`;
+}
+
+async function loadLastScan() {
+  try {
+    const s = await invoke("get_settings");
+    lastScanEl.textContent = s.last_scan_at
+      ? `Son tarama: ${fmtScanTime(s.last_scan_at)}`
+      : "Henüz tarama yapılmadı.";
+  } catch {
+    lastScanEl.textContent = "";
+  }
 }
 
 function urgency(d) {

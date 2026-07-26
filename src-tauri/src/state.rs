@@ -263,6 +263,9 @@ impl AppState {
         if succeeded == 0 {
             return Err(format!("IMAP taraması başarısız: {}", errors.join(" · ")));
         }
+        if let Ok(now) = self.db.now_iso() {
+            let _ = self.db.set_setting("last_scan_at", &now);
+        }
         Ok(added)
     }
 

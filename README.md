@@ -151,6 +151,21 @@ notarizes, and publishes macOS, Windows, and Linux releases with auto-update
 artifacts.
 See [`docs/RELEASING.md`](docs/RELEASING.md) for the required secrets and setup.
 
+## Disclaimer / Sorumluluk reddi
+
+Ekstre is a convenience tool, not a financial service. Amounts and dates parsed
+from emails may be wrong or incomplete, and reminders may not be delivered
+(device off, notifications disabled). Verifying your statements through your
+bank's official channels and paying on time remain entirely your
+responsibility — the developers accept no liability for missed or late
+payments, fees, interest, or any other damages arising from use of this app.
+
+Ekstre yalnızca yardımcı bir takip aracıdır; finansal bir hizmet değildir.
+E-postalardan okunan tutar ve tarihler hatalı ya da eksik olabilir,
+bildirimler ulaşmayabilir. Ödemeleri bankanızın resmî kanallarından doğrulamak
+ve zamanında yapmak tamamen sizin sorumluluğunuzdadır; gecikme, faiz ya da
+diğer zararlardan uygulama geliştiricileri sorumlu tutulamaz.
+
 ## License
 
 [MIT](LICENSE)

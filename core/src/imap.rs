@@ -8,10 +8,17 @@ use crate::parser::{parse_statement, Statement};
 use crate::pdf;
 use mail_parser::MimeHeaders;
 use pdfium_render::prelude::Pdfium;
+use std::net::{TcpStream, ToSocketAddrs};
+use std::time::Duration;
 
 const MONTHS: [&str; 12] = [
     "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
+
+// Every socket op carries a timeout: a connection killed by sleep/wake or a
+// network change must fail the poll, not hang the scheduler thread forever.
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
+const IO_TIMEOUT: Duration = Duration::from_secs(60);
 
 pub struct ImapConfig {
     pub host: String,
@@ -49,7 +56,10 @@ pub fn scan(
     pdfium: Option<&Pdfium>,
 ) -> Result<Vec<Scanned>, Box<dyn std::error::Error>> {
     let tls = native_tls::TlsConnector::builder().build()?;
-    let client = imap::connect((cfg.host.as_str(), cfg.port), cfg.host.as_str(), &tls)?;
+    let tcp = connect_tcp(&cfg.host, cfg.port)?;
+    let tls_stream = tls.connect(&cfg.host, tcp)?;
+    let mut client = imap::Client::new(tls_stream);
+    client.read_greeting()?;
     let mut session = client.login(&cfg.user, &cfg.password).map_err(|(e, _)| e)?;
     session.select(&cfg.mailbox)?;
 
@@ -84,6 +94,25 @@ pub fn scan(
 
     let _ = session.logout();
     Ok(out)
+}
+
+/// Open a TCP connection with connect/read/write timeouts, trying every
+/// resolved address before giving up.
+fn connect_tcp(host: &str, port: u16) -> std::io::Result<TcpStream> {
+    let mut last_err = None;
+    for addr in (host, port).to_socket_addrs()? {
+        match TcpStream::connect_timeout(&addr, CONNECT_TIMEOUT) {
+            Ok(stream) => {
+                stream.set_read_timeout(Some(IO_TIMEOUT))?;
+                stream.set_write_timeout(Some(IO_TIMEOUT))?;
+                return Ok(stream);
+            }
+            Err(e) => last_err = Some(e),
+        }
+    }
+    Err(last_err.unwrap_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::NotFound, format!("{host}: adres çözülemedi"))
+    }))
 }
 
 /// Match one raw RFC822 message against a bank and parse it, or `None`. For

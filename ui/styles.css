@@ -283,6 +283,13 @@ body.blur .min b { filter: blur(7px); }
   min-height: 16px;
   margin: 14px 0 0;
 }
+.lastscan {
+  text-align: center;
+  color: var(--muted);
+  font-size: 11px;
+  opacity: 0.75;
+  margin: 4px 0 14px;
+}
 
 /* ── calendar ── */
 .cal-head {

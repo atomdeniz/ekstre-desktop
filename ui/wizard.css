@@ -13,6 +13,13 @@ h1.section { margin-top: 30px; font-size: 16px; }
   box-shadow: var(--shadow);
 }
 .hint { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.disclaimer {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  opacity: 0.8;
+  margin-top: 20px;
+}
 .hint code {
   font-family: var(--font-num);
   background: var(--sunk);

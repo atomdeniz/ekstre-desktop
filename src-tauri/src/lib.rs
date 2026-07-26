@@ -121,11 +121,18 @@ pub fn run() {
 }
 
 /// Check for an available update and, if found, download + install it, then
-/// relaunch. Runs in the background so it never blocks startup.
+/// relaunch. Runs in the background so it never blocks startup. Requests carry
+/// explicit timeouts (short for the check, long enough for a slow download) so
+/// a dead connection fails and logs instead of hanging silently.
 fn check_for_updates(app: tauri::AppHandle) {
+    use std::time::Duration;
     use tauri_plugin_updater::UpdaterExt;
     tauri::async_runtime::spawn(async move {
-        let updater = match app.updater() {
+        let updater = match app
+            .updater_builder()
+            .timeout(Duration::from_secs(30))
+            .build()
+        {
             Ok(u) => u,
             Err(e) => {
                 log::warn!("updater unavailable: {e}");
@@ -133,8 +140,9 @@ fn check_for_updates(app: tauri::AppHandle) {
             }
         };
         match updater.check().await {
-            Ok(Some(update)) => {
+            Ok(Some(mut update)) => {
                 log::info!("update {} available; installing", update.version);
+                update.timeout = Some(Duration::from_secs(600));
                 if let Err(e) = update.download_and_install(|_, _| {}, || {}).await {
                     log::warn!("update install failed: {e}");
                 } else {
